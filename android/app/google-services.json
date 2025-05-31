@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "718388338279",
+    "project_id": "emergency-response-app-dit",
+    "storage_bucket": "emergency-response-app-dit.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:718388338279:android:743a1e052592be4417bec2",
+        "android_client_info": {
+          "package_name": "com.example.emergency_response_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBDGtWGwL2N_QQX4g4D5sk_8bI9Jp2vJ9M"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
