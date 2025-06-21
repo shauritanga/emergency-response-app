@@ -5,8 +5,10 @@ import 'responder_dashboard_screen.dart';
 import 'responder_emergencies_screen.dart';
 import 'responder_history_screen.dart';
 import 'responder_profile_screen.dart';
+import 'responder_messages_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/emergency_provider.dart';
+import '../../providers/chat_provider.dart';
 
 class ResponderHomeScreen extends ConsumerStatefulWidget {
   const ResponderHomeScreen({super.key});
@@ -42,6 +44,7 @@ class _ResponderHomeScreenState extends ConsumerState<ResponderHomeScreen> {
     final List<Widget> screens = [
       const ResponderDashboardScreen(),
       const ResponderEmergenciesScreen(),
+      const ResponderMessagesScreen(),
       const ResponderHistoryScreen(),
       const ResponderProfileScreen(),
     ];
@@ -49,7 +52,7 @@ class _ResponderHomeScreenState extends ConsumerState<ResponderHomeScreen> {
     return Scaffold(
       body: screens[_selectedIndex],
       bottomNavigationBar: BottomNavigationBar(
-        showUnselectedLabels: false,
+        showUnselectedLabels: true,
         items: [
           const BottomNavigationBarItem(
             icon: Icon(HugeIcons.strokeRoundedDashboardSquare01),
@@ -68,7 +71,11 @@ class _ResponderHomeScreenState extends ConsumerState<ResponderHomeScreen> {
             ),
             label: 'Emergencies',
           ),
-          BottomNavigationBarItem(
+          const BottomNavigationBarItem(
+            icon: Icon(HugeIcons.strokeRoundedMessage01),
+            label: 'Messages',
+          ),
+          const BottomNavigationBarItem(
             icon: Icon(HugeIcons.strokeRoundedWorkHistory),
             label: 'History',
           ),

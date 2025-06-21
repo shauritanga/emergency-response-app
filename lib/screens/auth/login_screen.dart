@@ -1,14 +1,12 @@
 import 'package:emergency_response_app/router/app_router.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons/hugeicons.dart';
-import 'package:responsive_framework/responsive_framework.dart';
 import 'package:google_fonts/google_fonts.dart';
 import '../../providers/auth_provider.dart';
-import '../citizen/citizen_home_screen.dart';
-import '../responder/responder_home_screen.dart';
-import '../admin/admin_dashboard_screen.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/feedback_utils.dart';
+import '../../utils/auth_error_handler.dart';
 import 'register_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -57,15 +55,40 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         if (userData != null) {
           // Update the role provider
           ref.read(userRoleProvider.notifier).state = userData.role;
+
+          // Show success message
+          if (mounted) {
+            FeedbackUtils.showSuccess(
+              context,
+              AuthErrorHandler.getSuccessMessage(
+                AuthAction.signIn,
+                userRole: userData.role,
+              ),
+            );
+          }
         }
 
         // Navigation will be handled by the router
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Extract the actual error message
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
+
+        setState(() {
+          _error = errorMessage;
+        });
+
+        // Also show as snackbar for better visibility
+        FeedbackUtils.showError(context, errorMessage);
+      }
     }
   }
 
@@ -181,15 +204,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 hint: 'Enter your email',
                                 icon: Icons.email_outlined,
                                 isDarkMode: isDarkMode,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your email';
-                                  }
-                                  if (!value.contains('@')) {
-                                    return 'Please enter a valid email';
-                                  }
-                                  return null;
-                                },
+                                validator: ValidationUtils.validateEmail,
                               ),
                               const SizedBox(height: 20),
 
@@ -201,15 +216,9 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 icon: Icons.lock_outline,
                                 isDarkMode: isDarkMode,
                                 isPassword: true,
-                                validator: (value) {
-                                  if (value == null || value.isEmpty) {
-                                    return 'Please enter your password';
-                                  }
-                                  if (value.length < 6) {
-                                    return 'Password must be at least 6 characters';
-                                  }
-                                  return null;
-                                },
+                                validator:
+                                    (value) =>
+                                        ValidationUtils.validatePassword(value),
                               ),
 
                               // Forgot Password

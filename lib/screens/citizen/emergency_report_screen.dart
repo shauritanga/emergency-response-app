@@ -83,11 +83,26 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
       );
 
       await ref.read(emergencyServiceProvider).reportEmergency(emergency);
+
       // Trigger notifications for department responders and nearby citizens
-      await ref.read(emergencyServiceProvider).notifyEmergency(emergency);
-      await ref
-          .read(notificationServiceProvider)
-          .subscribeToTopic(emergency.id);
+      // Make this non-blocking so emergency is still created if notifications fail
+      try {
+        await ref.read(emergencyServiceProvider).notifyEmergency(emergency);
+      } catch (notificationError) {
+        debugPrint(
+          'Notification failed but emergency was created: $notificationError',
+        );
+        // Continue execution - emergency was still created successfully
+      }
+
+      try {
+        await ref
+            .read(notificationServiceProvider)
+            .subscribeToTopic(emergency.id);
+      } catch (subscriptionError) {
+        debugPrint('Topic subscription failed: $subscriptionError');
+        // Continue execution - not critical for emergency creation
+      }
 
       // Show success animation
       setState(() {

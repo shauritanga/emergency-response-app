@@ -5,6 +5,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
+import '../../utils/validation_utils.dart';
+import '../../utils/feedback_utils.dart';
+import '../../utils/auth_error_handler.dart';
 
 class RegisterScreen extends ConsumerStatefulWidget {
   const RegisterScreen({super.key});
@@ -41,6 +44,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
       setState(() {
         _error = 'Please select a department';
       });
+      FeedbackUtils.showError(context, 'Please select a department');
       return;
     }
 
@@ -63,6 +67,17 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             department: _role == 'responder' ? _department : null,
           );
       if (user != null) {
+        // Show success message
+        if (mounted) {
+          FeedbackUtils.showSuccess(
+            context,
+            AuthErrorHandler.getSuccessMessage(
+              AuthAction.register,
+              userRole: _role,
+            ),
+          );
+        }
+
         // Navigate to the appropriate home screen based on role
         if (!mounted) return;
         switch (_role) {
@@ -80,10 +95,24 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
         }
       }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        // Extract the actual error message
+        String errorMessage = e.toString();
+        if (errorMessage.startsWith('Exception: ')) {
+          errorMessage = errorMessage.substring(11);
+        }
+
+        setState(() {
+          _error = errorMessage;
+        });
+
+        // Also show as snackbar for better visibility
+        FeedbackUtils.showError(context, errorMessage);
+      }
     }
   }
 
@@ -201,12 +230,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hint: 'Enter your full name',
                             icon: Icons.person_outline,
                             isDarkMode: isDarkMode,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your name';
-                              }
-                              return null;
-                            },
+                            validator: ValidationUtils.validateName,
                           ),
                           const SizedBox(height: 20),
 
@@ -217,15 +241,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             hint: 'Enter your email address',
                             icon: Icons.email_outlined,
                             isDarkMode: isDarkMode,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter your email';
-                              }
-                              if (!value.contains('@')) {
-                                return 'Please enter a valid email';
-                              }
-                              return null;
-                            },
+                            validator: ValidationUtils.validateEmail,
                           ),
                           const SizedBox(height: 20),
 
@@ -237,6 +253,7 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                             icon: Icons.phone_outlined,
                             isDarkMode: isDarkMode,
                             keyboardType: TextInputType.phone,
+                            validator: ValidationUtils.validatePhone,
                           ),
                           const SizedBox(height: 20),
 
@@ -244,19 +261,16 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                           _buildTextField(
                             controller: _passwordController,
                             label: 'Password',
-                            hint: 'Create a password',
+                            hint:
+                                'Create a password (min 8 chars, include letters & numbers)',
                             icon: Icons.lock_outline,
                             isDarkMode: isDarkMode,
                             isPassword: true,
-                            validator: (value) {
-                              if (value == null || value.isEmpty) {
-                                return 'Please enter a password';
-                              }
-                              if (value.length < 6) {
-                                return 'Password must be at least 6 characters';
-                              }
-                              return null;
-                            },
+                            validator:
+                                (value) => ValidationUtils.validatePassword(
+                                  value,
+                                  isRegistration: true,
+                                ),
                           ),
                           const SizedBox(height: 20),
 
@@ -333,8 +347,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
                                   onChanged: (value) {
                                     setState(() {
                                       _role = value!;
-                                      if (_role != 'responder')
+                                      if (_role != 'responder') {
                                         _department = null;
+                                      }
                                     });
                                   },
                                 ),

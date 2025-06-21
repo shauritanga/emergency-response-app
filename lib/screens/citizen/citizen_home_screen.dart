@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/notification_provider.dart';
+import 'citizen_dashboard_screen.dart';
 import 'emergency_report_screen.dart';
 import 'emergency_status_screen.dart';
 import 'package:flutter_background_geolocation/flutter_background_geolocation.dart'
@@ -29,6 +30,7 @@ class _CitizenHomeScreenState extends ConsumerState<CitizenHomeScreen> {
   void initState() {
     super.initState();
     _screens = [
+      const CitizenDashboardScreen(),
       const EmergencyReportScreen(isEmbedded: true),
       const EmergencyStatusScreen(isEmbedded: true),
       const CitizenMessagesScreen(),
@@ -62,6 +64,10 @@ class _CitizenHomeScreenState extends ConsumerState<CitizenHomeScreen> {
         unselectedItemColor: Colors.grey,
         items: const [
           BottomNavigationBarItem(
+            icon: Icon(HugeIcons.strokeRoundedDashboardSquare01),
+            label: 'Dashboard',
+          ),
+          BottomNavigationBarItem(
             icon: Icon(HugeIcons.strokeRoundedSiriNew),
             label: 'Report',
           ),
@@ -86,32 +92,106 @@ class _CitizenHomeScreenState extends ConsumerState<CitizenHomeScreen> {
   }
 
   Future<void> _initBackgroundLocation(WidgetRef ref, String userId) async {
-    // Request location permissions
-    await bg.BackgroundGeolocation.requestPermission();
-    // Configure background location
-    bg.BackgroundGeolocation.ready(
-      bg.Config(
-        desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
-        distanceFilter: 10.0, // Update when moving 10m
-        stationaryRadius: 25,
-        locationUpdateInterval: 300000, // 5 minutes in milliseconds
-        notificationTitle: 'Emergency Response',
-        notificationText: 'Updating location for emergency notifications',
-      ),
-    );
+    try {
+      // Request location permissions
+      await bg.BackgroundGeolocation.requestPermission();
 
-    // Update location in Firestore
-    bg.BackgroundGeolocation.onLocation((bg.Location location) {
-      FirebaseFirestore.instance.collection('users').doc(userId).update({
-        'lastLocation': {
+      // Configure background location with new Notification class
+      await bg.BackgroundGeolocation.ready(
+        bg.Config(
+          desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
+          distanceFilter: 10.0, // Update when moving 10m
+          stationaryRadius: 25,
+          locationUpdateInterval: 300000, // 5 minutes in milliseconds
+          // Use new Notification class instead of deprecated notification* fields
+          notification: bg.Notification(
+            title: 'Emergency Response',
+            text: 'Location tracking active for emergency services',
+            color: '#FF0000', // Red color for emergency app
+            channelName: 'Emergency Location Service',
+            smallIcon: 'drawable/ic_notification',
+            largeIcon: 'drawable/ic_launcher',
+            priority: bg.Config.NOTIFICATION_PRIORITY_HIGH,
+            sticky: true, // Keep notification persistent
+          ),
+          // Emergency response optimizations
+          enableHeadless: true, // Continue when app is closed
+          preventSuspend: true, // Prevent suspension on iOS
+          heartbeatInterval: 60, // Check every minute when stationary
+          stopOnTerminate: false, // Continue after app termination
+          startOnBoot: true, // Start on device boot
+        ),
+      );
+
+      debugPrint('Background location configured successfully');
+    } catch (e) {
+      debugPrint('Failed to configure background location: $e');
+    }
+
+    // Set up location update handler
+    bg.BackgroundGeolocation.onLocation((bg.Location location) async {
+      try {
+        final locationData = {
           'latitude': location.coords.latitude,
           'longitude': location.coords.longitude,
+          'accuracy': location.coords.accuracy,
           'timestamp': DateTime.now().toIso8601String(),
-        },
-      });
+          'isMoving': location.isMoving,
+        };
+
+        // Add optional fields if available
+        if (location.coords.altitude != -1) {
+          locationData['altitude'] = location.coords.altitude;
+        }
+        if (location.coords.speed != -1) {
+          locationData['speed'] = location.coords.speed;
+        }
+        if (location.coords.heading != -1) {
+          locationData['heading'] = location.coords.heading;
+        }
+        if (location.battery.level != -1) {
+          locationData['batteryLevel'] = location.battery.level;
+        }
+        locationData['isCharging'] = location.battery.isCharging;
+
+        await FirebaseFirestore.instance.collection('users').doc(userId).update(
+          {'lastLocation': locationData},
+        );
+
+        debugPrint(
+          'Location updated: ${location.coords.latitude}, ${location.coords.longitude} '
+          '(accuracy: ${location.coords.accuracy}m)',
+        );
+      } catch (e) {
+        debugPrint('Failed to update location in Firestore: $e');
+      }
     });
 
-    // Start background location
-    bg.BackgroundGeolocation.start();
+    // Handle provider changes (GPS on/off, etc.)
+    bg.BackgroundGeolocation.onProviderChange((bg.ProviderChangeEvent event) {
+      debugPrint(
+        'Location provider change: Status=${event.status}, GPS=${event.gps}, Network=${event.network}',
+      );
+    });
+
+    // Handle motion changes (moving/stationary)
+    bg.BackgroundGeolocation.onMotionChange((bg.Location location) {
+      debugPrint(
+        'Motion change: ${location.isMoving ? "MOVING" : "STATIONARY"} '
+        'at ${location.coords.latitude}, ${location.coords.longitude}',
+      );
+    });
+
+    // Start background location tracking
+    try {
+      bg.State state = await bg.BackgroundGeolocation.start();
+      debugPrint('Background location tracking started: ${state.enabled}');
+
+      if (!state.enabled) {
+        debugPrint('Warning: Background location tracking failed to start');
+      }
+    } catch (e) {
+      debugPrint('Error starting background location: $e');
+    }
   }
 }

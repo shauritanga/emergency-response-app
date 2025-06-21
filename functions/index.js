@@ -4,70 +4,116 @@ const admin = require("firebase-admin");
 admin.initializeApp();
 
 exports.notifyEmergency = onCall(async (request) => {
-  const { emergencyId, type, latitude, longitude, description } =
-    request.data[0];
-  console.log(request.data);
+  console.log("Received request data:", request.data);
+
+  // Handle both array and object formats
+  const data = Array.isArray(request.data) ? request.data[0] : request.data;
+  const { emergencyId, type, latitude, longitude, description } = data;
+
+  // Validate required fields
+  if (!emergencyId || !type || latitude === undefined || longitude === undefined) {
+    throw new HttpsError("invalid-argument", "Missing required emergency data");
+  }
 
   try {
+    // Safely handle description
+    const safeDescription = description || "No description provided";
+    const truncatedDescription = safeDescription.length > 100
+      ? safeDescription.substring(0, 100) + "..."
+      : safeDescription;
+
     // Notification payload
     const message = {
       notification: {
         title: `New ${type} Emergency`,
-        body: `Emergency reported: ${(description || "").substring(0, 100)}...`,
+        body: `Emergency reported: ${truncatedDescription}`,
       },
       data: {
-        emergencyId: emergencyId,
-        type: type,
+        emergencyId: String(emergencyId),
+        type: String(type),
       },
     };
 
     // 1. Notify responders in the department (using topic)
-    await admin.messaging().send({
-      ...message,
-      topic: type,
-    });
+    try {
+      await admin.messaging().send({
+        ...message,
+        topic: type,
+      });
+      console.log(`Notification sent to topic: ${type}`);
+    } catch (topicError) {
+      console.warn(`Failed to send topic notification: ${topicError.message}`);
+      // Continue execution - don't fail the entire function
+    }
 
     // 2. Notify nearby citizens (within 5km)
     const usersSnapshot = await admin.firestore().collection("users").get();
     const nearbyUserTokens = [];
+    console.log(`Checking ${usersSnapshot.docs.length} users for proximity`);
 
     for (const userDoc of usersSnapshot.docs) {
-      const user = userDoc.data();
-      if (user.role === "citizen" && user.lastLocation) {
-        const { latitude: userLat, longitude: userLon } = user.lastLocation;
-        const distance = getDistance(latitude, longitude, userLat, userLon);
-        if (distance > 0.05 && distance <= 5 && user.deviceToken) {
-          // 5km radius
-          nearbyUserTokens.push(user.deviceToken);
+      try {
+        const user = userDoc.data();
+        if (user.role === "citizen" && user.lastLocation && user.deviceToken) {
+          const { latitude: userLat, longitude: userLon } = user.lastLocation;
+
+          // Validate coordinates
+          if (typeof userLat === "number" && typeof userLon === "number") {
+            const distance = getDistance(latitude, longitude, userLat, userLon);
+            if (distance > 0.05 && distance <= 5) {
+              // 5km radius, exclude very close (< 50m) to avoid self-notification
+              nearbyUserTokens.push(user.deviceToken);
+            }
+          }
         }
+      } catch (userError) {
+        console.warn(`Error processing user ${userDoc.id}: ${userError.message}`);
+        // Continue with next user
       }
     }
 
     const nearByMessage = {
       notification: {
         title: `Emergency Nearby (${type})`,
-        body: `An emergency was reported near your location: ${description.substring(
-          0,
-          100
-        )}...`,
+        body: `An emergency was reported near your location: ${truncatedDescription}`,
       },
       data: {
-        emergencyId: emergencyId,
-        type: type,
+        emergencyId: String(emergencyId),
+        type: String(type),
       },
     };
 
     const uniqueTokens = [...new Set(nearbyUserTokens)];
+    console.log(`Found ${uniqueTokens.length} nearby users to notify`);
 
     if (uniqueTokens.length > 0) {
-      await admin.messaging().sendEachForMulticast({
-        tokens: uniqueTokens,
-        ...nearByMessage,
-      });
-      console.log(`Notification sent to ${uniqueTokens.length} nearby users`);
+      try {
+        const response = await admin.messaging().sendEachForMulticast({
+          tokens: uniqueTokens,
+          ...nearByMessage,
+        });
+        console.log(`Notification sent to ${response.successCount}/${uniqueTokens.length} nearby users`);
+
+        if (response.failureCount > 0) {
+          console.warn(`Failed to send to ${response.failureCount} users`);
+          response.responses.forEach((resp, idx) => {
+            if (!resp.success) {
+              const errorMessage = resp.error && resp.error.message ? resp.error.message : "Unknown error";
+              console.warn(`Failed token ${uniqueTokens[idx]}: ${errorMessage}`);
+            }
+          });
+        }
+      } catch (multicastError) {
+        console.error(`Multicast notification failed: ${multicastError.message}`);
+        // Don't fail the entire function - topic notifications might have succeeded
+      }
     }
 
-    return { success: true };
+    return {
+      success: true,
+      notifiedNearbyUsers: uniqueTokens.length,
+      timestamp: new Date().toISOString()
+    };
   } catch (error) {
     console.error("Error sending notifications:", error);
     throw new HttpsError("internal", "Failed to send notifications");

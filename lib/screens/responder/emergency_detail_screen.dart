@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../../models/emergency.dart';
+import '../../widgets/emergency_chat_widget.dart';
 
 class EmergencyDetailScreen extends ConsumerStatefulWidget {
   final Emergency emergency;
@@ -139,58 +140,62 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
       body:
           _isLoading
               ? const Center(child: CircularProgressIndicator())
-              : Stack(
-                children: [
-                  GoogleMap(
-                    onMapCreated: _onMapCreated,
-                    initialCameraPosition: CameraPosition(
-                      target: emergencyLatLng,
-                      zoom: 14,
-                    ),
-                    markers: {
-                      Marker(
-                        markerId: const MarkerId('emergency'),
-                        position: emergencyLatLng,
-                        infoWindow: InfoWindow(
-                          title: '${widget.emergency.type} Emergency',
-                          snippet: widget.emergency.description,
+              : SingleChildScrollView(
+                child: Column(
+                  children: [
+                    // Map Section
+                    SizedBox(
+                      height: 300,
+                      child: GoogleMap(
+                        onMapCreated: _onMapCreated,
+                        initialCameraPosition: CameraPosition(
+                          target: emergencyLatLng,
+                          zoom: 14,
                         ),
-                      ),
-                      if (_userLocation != null)
-                        Marker(
-                          markerId: const MarkerId('user'),
-                          position: _userLocation!,
-                          icon: BitmapDescriptor.defaultMarkerWithHue(
-                            BitmapDescriptor.hueBlue,
+                        markers: {
+                          Marker(
+                            markerId: const MarkerId('emergency'),
+                            position: emergencyLatLng,
+                            infoWindow: InfoWindow(
+                              title: '${widget.emergency.type} Emergency',
+                              snippet: widget.emergency.description,
+                            ),
                           ),
-                          infoWindow: const InfoWindow(title: 'Your Location'),
-                        ),
-                    },
-                    polylines: {
-                      if (_routePoints.isNotEmpty)
-                        Polyline(
-                          polylineId: const PolylineId('route'),
-                          points: _routePoints,
-                          color: Colors.blue,
-                          width: 5,
-                        ),
-                    },
-                    myLocationEnabled: true, // Show user's location dot
-                    myLocationButtonEnabled:
-                        true, // Add button to center on user
-                    zoomControlsEnabled: true, // Enable zoom buttons
-                  ),
-                  Positioned(
-                    bottom: 16,
-                    left: 16,
-                    right: 16,
-                    child: Card(
+                          if (_userLocation != null)
+                            Marker(
+                              markerId: const MarkerId('user'),
+                              position: _userLocation!,
+                              icon: BitmapDescriptor.defaultMarkerWithHue(
+                                BitmapDescriptor.hueBlue,
+                              ),
+                              infoWindow: const InfoWindow(
+                                title: 'Your Location',
+                              ),
+                            ),
+                        },
+                        polylines: {
+                          if (_routePoints.isNotEmpty)
+                            Polyline(
+                              polylineId: const PolylineId('route'),
+                              points: _routePoints,
+                              color: Colors.blue,
+                              width: 5,
+                            ),
+                        },
+                        myLocationEnabled: true,
+                        myLocationButtonEnabled: true,
+                        zoomControlsEnabled: true,
+                      ),
+                    ),
+
+                    // Emergency Details Card
+                    Card(
+                      margin: const EdgeInsets.all(16),
                       elevation: 4,
                       child: Padding(
                         padding: const EdgeInsets.all(16.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
-                          mainAxisSize: MainAxisSize.min,
                           children: [
                             Text(
                               'Emergency Details',
@@ -256,8 +261,11 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
                         ),
                       ),
                     ),
-                  ),
-                ],
+
+                    // Emergency Chat Widget
+                    EmergencyChatWidget(emergencyId: widget.emergency.id),
+                  ],
+                ),
               ),
     );
   }
