@@ -1,11 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emergency_response_app/screens/citizen/setting_screen.dart';
+import 'package:emergency_response_app/screens/common/feedback_screen.dart';
+import 'package:emergency_response_app/screens/common/help_support_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/image_picker_service.dart';
+import '../../utils/feedback_utils.dart';
 import '../auth/login_screen.dart';
 
 class ResponderProfileScreen extends ConsumerStatefulWidget {
@@ -61,13 +65,9 @@ class _ResponderProfileScreenState
                     : _phoneController.text.trim(),
           });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Profile updated successfully'),
-          backgroundColor: Colors.green,
-          behavior: SnackBarBehavior.floating,
-        ),
-      );
+      if (mounted) {
+        FeedbackUtils.showSuccess(context, 'Profile updated successfully');
+      }
 
       setState(() {
         _isEditing = false;
@@ -83,6 +83,63 @@ class _ResponderProfileScreenState
     }
   }
 
+  Future<void> _updateProfilePicture() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Pick image
+      final imageFile = await ImagePickerService.pickImage(context);
+      if (imageFile == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Upload image to Supabase
+      final imageUrl = await ImagePickerService.uploadImageToSupabase(
+        imageFile,
+      );
+      if (imageUrl == null) {
+        throw Exception('Failed to upload image');
+      }
+
+      // Update user profile with new photo URL
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'photoURL': imageUrl});
+
+        // Invalidate the user data provider to refresh the UI
+        ref.invalidate(userFutureProvider(user.uid));
+
+        if (mounted) {
+          FeedbackUtils.showSuccess(
+            context,
+            'Profile picture updated successfully',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackUtils.showError(
+          context,
+          'Failed to update profile picture: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   @override
   void dispose() {
     _nameController.dispose();
@@ -93,11 +150,11 @@ class _ResponderProfileScreenState
   Color _getDepartmentColor(String? department) {
     switch (department) {
       case 'Medical':
-        return Colors.red;
+        return Colors.deepPurple;
       case 'Fire':
-        return Colors.orange;
+        return Colors.purple;
       case 'Police':
-        return Colors.blue;
+        return Colors.indigo;
       default:
         return Colors.grey;
     }
@@ -165,14 +222,59 @@ class _ResponderProfileScreenState
                         children: [
                           Row(
                             children: [
-                              CircleAvatar(
-                                radius: 40,
-                                backgroundColor: Colors.white,
-                                child: CircleAvatar(
-                                  radius: 38,
-                                  backgroundImage: CachedNetworkImageProvider(
-                                    "https://images.unsplash.com/photo-1547425260-76bcadfb4f2c?w=700&auto=format&fit=crop&q=60&ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTF8fHBlcnNvbnxlbnwwfHwwfHx8MA%3D%3D",
-                                  ),
+                              GestureDetector(
+                                onTap: _updateProfilePicture,
+                                child: Stack(
+                                  children: [
+                                    CircleAvatar(
+                                      radius: 40,
+                                      backgroundColor: Colors.white,
+                                      child: CircleAvatar(
+                                        radius: 38,
+                                        backgroundImage:
+                                            data.photoURL != null &&
+                                                    data.photoURL!.isNotEmpty
+                                                ? CachedNetworkImageProvider(
+                                                  data.photoURL!,
+                                                )
+                                                : null,
+                                        child:
+                                            data.photoURL == null ||
+                                                    data.photoURL!.isEmpty
+                                                ? const Icon(
+                                                  Icons.person,
+                                                  size: 40,
+                                                  color: Colors.grey,
+                                                )
+                                                : null,
+                                      ),
+                                    ),
+                                    Positioned(
+                                      right: 0,
+                                      bottom: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.deepPurple,
+                                          shape: BoxShape.circle,
+                                          boxShadow: [
+                                            BoxShadow(
+                                              color: Colors.black.withValues(
+                                                alpha: 0.2,
+                                              ),
+                                              blurRadius: 4,
+                                              offset: const Offset(0, 2),
+                                            ),
+                                          ],
+                                        ),
+                                        child: const Icon(
+                                          Icons.camera_alt,
+                                          color: Colors.white,
+                                          size: 16,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
                                 ),
                               ),
                               const SizedBox(width: 16),
@@ -462,16 +564,83 @@ class _ResponderProfileScreenState
             shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(12),
             ),
+            backgroundColor: Colors.deepPurple,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const FeedbackScreen()),
+            );
+          },
+          icon: const Icon(Icons.feedback_outlined),
+          label: Text('Send Feedback', style: GoogleFonts.poppins()),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: Colors.purple,
+            foregroundColor: Colors.white,
+          ),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (_) => const HelpSupportScreen()),
+            );
+          },
+          icon: const Icon(Icons.help_outline),
+          label: Text('Help & Support', style: GoogleFonts.poppins()),
+          style: ElevatedButton.styleFrom(
+            minimumSize: const Size(double.infinity, 50),
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(12),
+            ),
+            backgroundColor: Colors.indigo,
+            foregroundColor: Colors.white,
           ),
         ),
         const SizedBox(height: 12),
         ElevatedButton.icon(
           onPressed: () async {
-            await ref.read(authServiceProvider).signOut();
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const LoginScreen()),
+            final shouldLogout = await showDialog<bool>(
+              context: context,
+              builder:
+                  (context) => AlertDialog(
+                    title: const Text('Logout'),
+                    content: const Text('Are you sure you want to logout?'),
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.of(context).pop(false),
+                        child: const Text('Cancel'),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.of(context).pop(true),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.red,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text('Logout'),
+                      ),
+                    ],
+                  ),
             );
+
+            if (shouldLogout == true && mounted) {
+              await ref.read(authServiceProvider).signOut();
+              if (mounted) {
+                Navigator.pushReplacement(
+                  context,
+                  MaterialPageRoute(builder: (_) => const LoginScreen()),
+                );
+              }
+            }
           },
           icon: const Icon(Icons.logout_rounded),
           label: Text('Logout', style: GoogleFonts.poppins()),

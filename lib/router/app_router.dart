@@ -2,6 +2,8 @@ import 'package:emergency_response_app/router/go_router_refresh_stream.dart';
 import 'package:flutter/material.dart';
 import 'package:go_router/go_router.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../screens/splash/splash_screen.dart';
+import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/citizen/citizen_home_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
@@ -36,19 +38,33 @@ final routerProvider = Provider<GoRouter>((ref) {
   final userRole = ref.watch(userRoleProvider);
 
   return GoRouter(
-    initialLocation: '/login',
+    initialLocation: '/',
     redirect: (context, state) {
       final isLoggedIn = authState.value != null;
-      final isLoginRoute = state.matchedLocation == '/login';
-      final isRegisterRoute = state.matchedLocation == '/register';
+      final currentLocation = state.matchedLocation;
 
-      // If not logged in and not on login or register page, redirect to login
-      if (!isLoggedIn && !isLoginRoute && !isRegisterRoute) {
-        return '/login';
+      // Allow splash and onboarding screens without authentication
+      if (currentLocation == '/' || currentLocation == '/onboarding') {
+        return null;
       }
 
-      // If logged in and on login or register page, redirect based on role
-      if (isLoggedIn && (isLoginRoute || isRegisterRoute)) {
+      final isAuthRoute =
+          currentLocation == '/auth' ||
+          currentLocation == '/login' ||
+          currentLocation == '/register';
+
+      // If not logged in and not on auth routes, redirect to auth
+      if (!isLoggedIn && !isAuthRoute) {
+        return '/auth';
+      }
+
+      // If logged in and on auth routes, redirect to dashboard
+      if (isLoggedIn && isAuthRoute) {
+        return '/dashboard';
+      }
+
+      // If logged in and on dashboard, redirect based on role
+      if (isLoggedIn && currentLocation == '/dashboard') {
         switch (userRole) {
           case 'responder':
             return '/responder';
@@ -68,11 +84,32 @@ final routerProvider = Provider<GoRouter>((ref) {
       ref.watch(authServiceProvider).authStateChanges,
     ),
     routes: [
+      // Splash Screen
+      GoRoute(path: '/', builder: (context, state) => const SplashScreen()),
+
+      // Onboarding Screen
+      GoRoute(
+        path: '/onboarding',
+        builder: (context, state) => const OnboardingScreen(),
+      ),
+
+      // Auth Routes
+      GoRoute(path: '/auth', builder: (context, state) => const LoginScreen()),
       GoRoute(path: '/login', builder: (context, state) => const LoginScreen()),
       GoRoute(
         path: '/register',
         builder: (context, state) => const RegisterScreen(),
       ),
+
+      // Dashboard Route (redirects based on role)
+      GoRoute(
+        path: '/dashboard',
+        builder:
+            (context, state) =>
+                const SplashScreen(), // Temporary, will redirect
+      ),
+
+      // Role-specific Routes
       GoRoute(
         path: '/citizen',
         builder: (context, state) => const CitizenHomeScreen(),

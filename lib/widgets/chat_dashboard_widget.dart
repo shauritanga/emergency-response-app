@@ -80,12 +80,13 @@ class ChatDashboardWidget extends ConsumerWidget {
           ),
         ),
         IconButton(
-          onPressed: () => Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => const ConversationListScreen(),
-            ),
-          ),
+          onPressed:
+              () => Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const ConversationListScreen(),
+                ),
+              ),
           icon: const Icon(HugeIcons.strokeRoundedArrowRight01),
           style: IconButton.styleFrom(
             backgroundColor: Colors.grey.shade100,
@@ -105,33 +106,35 @@ class ChatDashboardWidget extends ConsumerWidget {
     return conversationsAsync.when(
       data: (conversations) {
         final activeChats = conversations.where((c) => c.isActive).length;
-        final emergencyChats = conversations.where((c) => c.isEmergencyRelated).length;
-        
+        final emergencyChats =
+            conversations.where((c) => c.isEmergencyRelated).length;
+
         return totalUnreadAsync.when(
-          data: (unreadCount) => Row(
-            children: [
-              _buildStatItem(
-                icon: HugeIcons.strokeRoundedMessage01,
-                label: 'Active Chats',
-                value: activeChats.toString(),
-                color: Colors.blue,
+          data:
+              (unreadCount) => Row(
+                children: [
+                  _buildStatItem(
+                    icon: HugeIcons.strokeRoundedMessage01,
+                    label: 'Active Chats',
+                    value: activeChats.toString(),
+                    color: Colors.blue,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildStatItem(
+                    icon: HugeIcons.strokeRoundedAlert02,
+                    label: 'Emergency',
+                    value: emergencyChats.toString(),
+                    color: Colors.red,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildStatItem(
+                    icon: HugeIcons.strokeRoundedNotification01,
+                    label: 'Unread',
+                    value: unreadCount.toString(),
+                    color: unreadCount > 0 ? Colors.orange : Colors.green,
+                  ),
+                ],
               ),
-              const SizedBox(width: 16),
-              _buildStatItem(
-                icon: HugeIcons.strokeRoundedAlert02,
-                label: 'Emergency',
-                value: emergencyChats.toString(),
-                color: Colors.red,
-              ),
-              const SizedBox(width: 16),
-              _buildStatItem(
-                icon: HugeIcons.strokeRoundedNotification01,
-                label: 'Unread',
-                value: unreadCount.toString(),
-                color: unreadCount > 0 ? Colors.orange : Colors.green,
-              ),
-            ],
-          ),
           loading: () => _buildStatsLoading(),
           error: (_, __) => _buildStatsError(),
         );
@@ -183,8 +186,9 @@ class ChatDashboardWidget extends ConsumerWidget {
 
   Widget _buildStatsLoading() {
     return Row(
-      children: List.generate(3, (index) => 
-        Expanded(
+      children: List.generate(
+        3,
+        (index) => Expanded(
           child: Container(
             margin: EdgeInsets.only(right: index < 2 ? 16 : 0),
             height: 80,
@@ -208,14 +212,15 @@ class ChatDashboardWidget extends ConsumerWidget {
       ),
       child: Row(
         children: [
-          const Icon(HugeIcons.strokeRoundedAlert02, color: Colors.red, size: 16),
+          const Icon(
+            HugeIcons.strokeRoundedAlert02,
+            color: Colors.red,
+            size: 16,
+          ),
           const SizedBox(width: 8),
           Text(
             'Unable to load chat statistics',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.red,
-            ),
+            style: GoogleFonts.poppins(fontSize: 12, color: Colors.red),
           ),
         ],
       ),
@@ -241,14 +246,14 @@ class ChatDashboardWidget extends ConsumerWidget {
               icon: HugeIcons.strokeRoundedAdd01,
               label: 'New Chat',
               onPressed: () => _showNewChatOptions(context),
-              color: Colors.blue,
+              color: Colors.deepPurple,
             ),
             const SizedBox(width: 8),
             _buildQuickActionButton(
               icon: HugeIcons.strokeRoundedSearch01,
               label: 'Search',
               onPressed: () => _showGlobalSearch(context, userId),
-              color: Colors.green,
+              color: Colors.purple,
             ),
             const SizedBox(width: 8),
             _buildQuickActionButton(
@@ -300,11 +305,13 @@ class ChatDashboardWidget extends ConsumerWidget {
     );
   }
 
-  Widget _buildRecentActivity(AsyncValue<List<Conversation>> conversationsAsync) {
+  Widget _buildRecentActivity(
+    AsyncValue<List<Conversation>> conversationsAsync,
+  ) {
     return conversationsAsync.when(
       data: (conversations) {
         final recentConversations = conversations.take(3).toList();
-        
+
         if (recentConversations.isEmpty) {
           return _buildNoActivity();
         }
@@ -321,8 +328,8 @@ class ChatDashboardWidget extends ConsumerWidget {
               ),
             ),
             const SizedBox(height: 8),
-            ...recentConversations.map((conversation) => 
-              _buildActivityItem(conversation),
+            ...recentConversations.map(
+              (conversation) => _buildActivityItem(conversation),
             ),
           ],
         );
@@ -344,7 +351,9 @@ class ChatDashboardWidget extends ConsumerWidget {
         children: [
           CircleAvatar(
             radius: 12,
-            backgroundColor: _getConversationColor(conversation).withValues(alpha: 0.1),
+            backgroundColor: _getConversationColor(
+              conversation,
+            ).withValues(alpha: 0.1),
             child: Icon(
               _getConversationIcon(conversation),
               color: _getConversationColor(conversation),
@@ -467,15 +476,15 @@ class ChatDashboardWidget extends ConsumerWidget {
 
   void _showGlobalSearch(BuildContext context, String userId) {
     // TODO: Implement global search
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Global search coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Global search coming soon!')));
   }
 
   void _showChatSettings(BuildContext context) {
     // TODO: Implement chat settings
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Chat settings coming soon!')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Chat settings coming soon!')));
   }
 }

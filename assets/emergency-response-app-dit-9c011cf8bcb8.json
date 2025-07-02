@@ -1,0 +1,13 @@
+{
+  "type": "service_account",
+  "project_id": "emergency-response-app-dit",
+  "private_key_id": "9c011cf8bcb83c2460a01bcaae2247a788b24552",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQD6LT+adcr2ra3s\nahb0gZ+lPAQan4EdUfiV9haUotmA9awKEG91XKje+MniAVjb2hNugmrvBBjMmSly\nHXsNHtHNgdlja0G/Ypyp72rxYc45jGeLvVoQ+sGIN8V9YT1LMFbvV1X0Md7d2HrE\no6X/zZBpZIwX7Zyuy7HSxToK4m5qjjCeqUcAQ8eTBr3lWKt0ZtMu8g7KXkxUEyMQ\n0ib1g9yVAp8j0bYZOJ+vYXeGqvoFrrNIgS8wDbVjLJRKZT341guoGb0tGnEoFvl8\nq4SMKMloPejQOvsJ+1ASRhcYH42wpSrF/5r4nLCugszU3zuZsC135bniZmmPDrh6\nrS73GwqVAgMBAAECggEAAWsLPsFnLqHKaBor2iP39zRRY6M+1J831QXJl/saV4hM\n+tuf/h7R2D25yz2ttsVUMd6sY4F28IX3va1cGrVvhAY16MHdZAvXjoEMbqTayem5\nVonyvkDlovOJ+413DvuNqpqoopM7y68j9wRkdwA/ztEimCohJr6B2guDKjehX5o+\n3sr3eglcNh2qOZy4PuDI+7eZjh6reEkWjwaCAuLSoE4h6YqlM+QV4aqWHyrTUZmc\nqYfAc5o/kU9+WSCgxekKE7VZaohrtyhvnHGVw1n6qj0f0d2gY7NIvhd00FiBTZI0\n2fkON1bauMb+dulrRVDpoFpqp4g6VAcrFTNgf17y6wKBgQD+xDkWwR/tTYTPUILX\nbSrKrAdounADYl8YBf/B+l342Vrz/6lEWPWNGIKa9Ov1PwTJ/4seJ8Bw6vQYePg3\nCF/XK/Aa2z70GxSm3ozbXeAoil1nSQF7zhH5k6czUrBzvCdeyxtoPh3mozki6ENS\np9k9emdYpAXZtmtXlXMv6syXBwKBgQD7Y1YpWnjJD3+hNh9QsArbt+t+od1XGfm/\n2jHPLOCgdTBN/jfH3QFrp25XDdH6farDoZHQs7/ik74PM6OIztM99i8Pn35KANhy\nZirsESy1Y7UNbArOmYJbZ2YasOLEdFAGbgjvRPSVPMEOQMJfpvIyThaqUslmqyj8\nuM60dGWugwKBgQC2MXXyQ+KlPk7AQ/+OOE/l6OjTiKEainsfHwssmfQiRq642Bkg\n+81/PgwI7SbhmFPAcbP3uM3y8tPlvH0mPiLsKkvnqOt4fvVh8L4jExt/YpQxjRA2\njcRlC6cDGRt/aQtuyymqfuG7UvdFc3zR25+MS8EkrwhQDhjt5b8egXgWeQKBgF9z\nVF/XTk1paRiZKELG1RigOPaYFybfYgkKnCcB7zh9xp2WjS+CJuvtYuQDB1uJI7Gs\nQ2VvGsi5OE0lWk6z2VmJhEz2TkljEMw/JsUDsGofNbum7mOLvgdet1IjH7dgQpJu\nbU4MbKHNs6/pvuP6y7N2Gv0I+hfVnXZ35WR3XbRpAoGBAO5Ja5OOy2s6dLNJ+ZuP\ng+luo34ibl+81RG6+vsahzmKXYQ26u0DYTH+UJCU/pFQEN3EsWXbfYSpb6D+aNJy\nbEExoTsg9BxsuW2xhygzUOEP6D7PK8revkzNI4tniewz5LNtQoEd7HkYODqGJQsj\nMNru5V5q+B698KCjEm+J1AAi\n-----END PRIVATE KEY-----\n",
+  "client_email": "fcm-379@emergency-response-app-dit.iam.gserviceaccount.com",
+  "client_id": "102420948242882274859",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/fcm-379%40emergency-response-app-dit.iam.gserviceaccount.com",
+  "universe_domain": "googleapis.com"
+}

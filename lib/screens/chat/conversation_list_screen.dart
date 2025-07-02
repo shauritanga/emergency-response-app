@@ -86,7 +86,7 @@ class ConversationListScreen extends ConsumerWidget {
           return _buildConversationList(context, ref, conversations, user.uid);
         },
         loading: () => const Center(child: CircularProgressIndicator()),
-        error: (error, _) => _buildErrorState(context, error.toString()),
+        error: (error, _) => _buildErrorState(context, ref, error.toString()),
       ),
       floatingActionButton: FloatingActionButton(
         heroTag: "conversation_list_fab",
@@ -150,7 +150,7 @@ class ConversationListScreen extends ConsumerWidget {
     );
   }
 
-  Widget _buildErrorState(BuildContext context, String error) {
+  Widget _buildErrorState(BuildContext context, WidgetRef ref, String error) {
     return Center(
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
@@ -181,7 +181,7 @@ class ConversationListScreen extends ConsumerWidget {
           const SizedBox(height: 24),
           ElevatedButton.icon(
             onPressed: () {
-              // Refresh conversations
+              ref.invalidate(userConversationsProvider);
             },
             icon: const Icon(HugeIcons.strokeRoundedRefresh),
             label: Text(
@@ -360,7 +360,87 @@ class ConversationListScreen extends ConsumerWidget {
   }
 
   void _showNewChatDialog(BuildContext context, WidgetRef? ref, String userId) {
-    FeedbackUtils.showInfo(context, 'New chat feature coming soon!');
-    // TODO: Implement new chat dialog
+    final TextEditingController recipientController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: Text(
+            'Start New Chat',
+            style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              TextField(
+                controller: recipientController,
+                decoration: InputDecoration(
+                  labelText: 'Recipient ID or Name',
+                  hintText: 'Enter user ID or search name',
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                'Enter the ID of the person you want to message.',
+                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade600),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: Text(
+                'Cancel',
+                style: GoogleFonts.poppins(color: Colors.grey),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () async {
+                final recipientId = recipientController.text.trim();
+                if (recipientId.isNotEmpty && recipientId != userId) {
+                  // Create a new conversation
+                  if (ref != null) {
+                    try {
+                      final newConversationId = await ref.read(chatServiceProvider).createConversation(
+                        type: ConversationType.direct,
+                        participantIds: [userId, recipientId],
+                        participantNames: {'': ''}, // Placeholder, adjust based on actual data
+                        participantRoles: {'': ''}, // Placeholder, adjust based on actual data
+                        createdBy: userId,
+                      );
+                      Navigator.of(context).pop();
+                      _openConversation(context, newConversationId);
+                    } catch (e) {
+                      FeedbackUtils.showError(context, 'Failed to start chat: $e');
+                    }
+                  } else {
+                    Navigator.of(context).pop();
+                    FeedbackUtils.showError(context, 'Error: Unable to access chat service');
+                  }
+                } else {
+                  FeedbackUtils.showError(context, 'Please enter a valid recipient ID');
+                }
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Theme.of(context).primaryColor,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              child: Text(
+                'Start Chat',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w500),
+              ),
+            ),
+          ],
+        );
+      },
+    );
   }
 }

@@ -151,7 +151,17 @@ class ChatMessage {
 }
 
 /// Message types for different content
-enum MessageType { text, image, location, system, emergency, status }
+enum MessageType {
+  text,
+  image,
+  location,
+  system,
+  emergency,
+  status,
+  voice, // Voice messages
+  evacuation, // Evacuation notices
+  statusUpdate, // Emergency status updates
+}
 
 /// Message delivery status
 enum MessageStatus { sending, sent, delivered, read, failed }

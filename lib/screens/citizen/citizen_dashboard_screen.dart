@@ -88,7 +88,7 @@ class CitizenDashboardScreen extends ConsumerWidget {
                 builder: (context) => const EmergencyReportScreen(),
               ),
             ),
-        backgroundColor: Colors.red,
+        backgroundColor: Colors.deepPurple,
         child: const Icon(HugeIcons.strokeRoundedAlert02, color: Colors.white),
       ),
     );
@@ -121,7 +121,7 @@ class CitizenDashboardScreen extends ConsumerWidget {
                       decoration: BoxDecoration(
                         color:
                             activeEmergencies.isNotEmpty
-                                ? Colors.red.withValues(alpha: 0.1)
+                                ? Colors.deepPurple.withValues(alpha: 0.1)
                                 : Colors.green.withValues(alpha: 0.1),
                         borderRadius: BorderRadius.circular(8),
                       ),
@@ -131,7 +131,7 @@ class CitizenDashboardScreen extends ConsumerWidget {
                             : HugeIcons.strokeRoundedCheckmarkCircle01,
                         color:
                             activeEmergencies.isNotEmpty
-                                ? Colors.red
+                                ? Colors.deepPurple
                                 : Colors.green,
                         size: 20,
                       ),

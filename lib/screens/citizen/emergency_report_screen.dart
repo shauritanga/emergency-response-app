@@ -1,6 +1,9 @@
+import 'dart:io';
 import 'package:emergency_response_app/providers/emergency_provider.dart';
 import 'package:emergency_response_app/providers/location_provider.dart';
 import 'package:emergency_response_app/providers/notification_provider.dart';
+import 'package:emergency_response_app/providers/image_picker_provider.dart';
+import 'package:emergency_response_app/services/image_picker_service.dart';
 import 'package:emergency_response_app/screens/citizen/setting_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -44,6 +47,8 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
   void dispose() {
     _descriptionController.dispose();
     _animationController.dispose();
+    // Clear selected images when leaving the screen
+    ref.read(selectedImagesProvider.notifier).clearImages();
     super.dispose();
   }
 
@@ -71,6 +76,26 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
         return;
       }
 
+      // Upload images to Supabase if any are selected
+      final selectedImages = ref.read(selectedImagesProvider);
+      List<String> imageUrls = [];
+
+      if (selectedImages.isNotEmpty) {
+        final uploadProgressNotifier = ref.read(
+          imageUploadProgressProvider.notifier,
+        );
+        uploadProgressNotifier.startUpload(selectedImages.length);
+
+        imageUrls = await ImagePickerService.uploadMultipleImagesToSupabase(
+          selectedImages,
+          onProgress: (current, total) {
+            uploadProgressNotifier.updateProgress(current, total);
+          },
+        );
+
+        uploadProgressNotifier.completeUpload();
+      }
+
       final emergency = Emergency(
         id: const Uuid().v4(),
         userId: ref.read(authStateProvider).value!.uid,
@@ -80,6 +105,7 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
         description: _descriptionController.text,
         status: 'Pending',
         timestamp: DateTime.now(),
+        imageUrls: imageUrls,
       );
 
       await ref.read(emergencyServiceProvider).reportEmergency(emergency);
@@ -95,14 +121,8 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
         // Continue execution - emergency was still created successfully
       }
 
-      try {
-        await ref
-            .read(notificationServiceProvider)
-            .subscribeToTopic(emergency.id);
-      } catch (subscriptionError) {
-        debugPrint('Topic subscription failed: $subscriptionError');
-        // Continue execution - not critical for emergency creation
-      }
+      // Notifications are now handled automatically by the enhanced notification service
+      // No need for manual topic subscription
 
       // Show success animation
       setState(() {
@@ -364,6 +384,31 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
                   ),
                 ),
 
+                const SizedBox(height: 32),
+
+                // Image Selection Section
+                Text(
+                  'Add Photos (Optional)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                Card(
+                  elevation: 4,
+                  shadowColor: Colors.black26,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: _buildImageSection(isDarkMode),
+                  ),
+                ),
+
                 // Error message
                 if (_error != null)
                   Padding(
@@ -401,13 +446,13 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
                   child: ElevatedButton(
                     onPressed: _isSubmitting ? null : _reportEmergency,
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.red,
+                      backgroundColor: Colors.deepPurple,
                       foregroundColor: Colors.white,
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
                       ),
                       elevation: 4,
-                      shadowColor: Colors.red.withOpacity(0.4),
+                      shadowColor: Colors.deepPurple.withOpacity(0.4),
                     ),
                     child:
                         _isSubmitting
@@ -461,6 +506,167 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
         ),
       ],
     );
+  }
+
+  Widget _buildImageSection(bool isDarkMode) {
+    final selectedImages = ref.watch(selectedImagesProvider);
+    final uploadProgress = ref.watch(imageUploadProgressProvider);
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          'Add photos to help responders understand the situation better',
+          style: GoogleFonts.poppins(
+            fontSize: 14,
+            color: isDarkMode ? Colors.white70 : Colors.black54,
+          ),
+        ),
+        const SizedBox(height: 16),
+
+        // Image selection buttons
+        Row(
+          children: [
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : () => _pickSingleImage(),
+                icon: const Icon(HugeIcons.strokeRoundedCamera01),
+                label: const Text('Take Photo'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: ElevatedButton.icon(
+                onPressed: _isSubmitting ? null : () => _pickMultipleImages(),
+                icon: const Icon(HugeIcons.strokeRoundedImage01),
+                label: const Text('Gallery'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+
+        // Upload progress
+        if (uploadProgress != null && !uploadProgress.isComplete)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Column(
+              children: [
+                LinearProgressIndicator(
+                  value: uploadProgress.progress,
+                  backgroundColor: Colors.grey.withValues(alpha: 0.3),
+                  valueColor: AlwaysStoppedAnimation<Color>(
+                    Theme.of(context).primaryColor,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Uploading images... ${uploadProgress.progressText}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 12,
+                    color: isDarkMode ? Colors.white70 : Colors.black54,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+        // Selected images preview
+        if (selectedImages.isNotEmpty)
+          Padding(
+            padding: const EdgeInsets.only(top: 16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Selected Images (${selectedImages.length}/5)',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w500,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                SizedBox(
+                  height: 80,
+                  child: ListView.builder(
+                    scrollDirection: Axis.horizontal,
+                    itemCount: selectedImages.length,
+                    itemBuilder: (context, index) {
+                      return Padding(
+                        padding: const EdgeInsets.only(right: 8.0),
+                        child: Stack(
+                          children: [
+                            ClipRRect(
+                              borderRadius: BorderRadius.circular(8),
+                              child: Image.file(
+                                selectedImages[index],
+                                width: 80,
+                                height: 80,
+                                fit: BoxFit.cover,
+                              ),
+                            ),
+                            Positioned(
+                              top: 4,
+                              right: 4,
+                              child: GestureDetector(
+                                onTap: () => _removeImage(index),
+                                child: Container(
+                                  padding: const EdgeInsets.all(4),
+                                  decoration: const BoxDecoration(
+                                    color: Colors.red,
+                                    shape: BoxShape.circle,
+                                  ),
+                                  child: const Icon(
+                                    Icons.close,
+                                    color: Colors.white,
+                                    size: 16,
+                                  ),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ],
+            ),
+          ),
+      ],
+    );
+  }
+
+  Future<void> _pickSingleImage() async {
+    final image = await ImagePickerService.pickImage(context);
+    if (image != null) {
+      ref.read(selectedImagesProvider.notifier).addImage(image);
+    }
+  }
+
+  Future<void> _pickMultipleImages() async {
+    final images = await ImagePickerService.pickMultipleImages(maxImages: 5);
+    if (images.isNotEmpty) {
+      ref.read(selectedImagesProvider.notifier).setImages(images);
+    }
+  }
+
+  void _removeImage(int index) {
+    ref.read(selectedImagesProvider.notifier).removeImage(index);
   }
 
   Widget _buildSuccessView(bool isDarkMode) {
@@ -524,11 +730,11 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
   Color _getTypeColor(String type) {
     switch (type) {
       case 'Medical':
-        return Colors.red;
+        return Colors.deepPurple;
       case 'Fire':
-        return Colors.orange;
+        return Colors.purple;
       case 'Police':
-        return Colors.blue;
+        return Colors.indigo;
       default:
         return Colors.grey;
     }

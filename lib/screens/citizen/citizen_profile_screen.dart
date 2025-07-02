@@ -1,9 +1,15 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:emergency_response_app/screens/citizen/setting_screen.dart';
+import 'package:emergency_response_app/screens/common/feedback_screen.dart';
+import 'package:emergency_response_app/screens/common/help_support_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
+import '../../services/image_picker_service.dart';
+import '../../utils/feedback_utils.dart';
 import '../auth/login_screen.dart';
 
 class CitizenProfileScreen extends ConsumerStatefulWidget {
@@ -45,18 +51,75 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
         setState(() {
           _isEditing = false;
         });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Profile updated successfully')),
-        );
+        if (mounted) {
+          FeedbackUtils.showSuccess(context, 'Profile updated successfully');
+        }
       }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error updating profile: $e')));
+      if (mounted) {
+        FeedbackUtils.showError(context, 'Error updating profile: $e');
+      }
     } finally {
       setState(() {
         _isLoading = false;
       });
+    }
+  }
+
+  Future<void> _updateProfilePicture() async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Pick image
+      final imageFile = await ImagePickerService.pickImage(context);
+      if (imageFile == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Upload image to Supabase
+      final imageUrl = await ImagePickerService.uploadImageToSupabase(
+        imageFile,
+      );
+      if (imageUrl == null) {
+        throw Exception('Failed to upload image');
+      }
+
+      // Update user profile with new photo URL
+      final user = ref.read(authStateProvider).value;
+      if (user != null) {
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .update({'photoURL': imageUrl});
+
+        // Invalidate the user data provider to refresh the UI
+        ref.invalidate(userFutureProvider(user.uid));
+
+        if (mounted) {
+          FeedbackUtils.showSuccess(
+            context,
+            'Profile picture updated successfully',
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackUtils.showError(
+          context,
+          'Failed to update profile picture: $e',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -111,16 +174,28 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                           Positioned(
                             right: 0,
                             bottom: 0,
-                            child: Container(
-                              padding: const EdgeInsets.all(4),
-                              decoration: BoxDecoration(
-                                color: Theme.of(context).primaryColor,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 20,
+                            child: GestureDetector(
+                              onTap: _updateProfilePicture,
+                              child: Container(
+                                padding: const EdgeInsets.all(4),
+                                decoration: BoxDecoration(
+                                  color: Colors.deepPurple,
+                                  shape: BoxShape.circle,
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(
+                                        alpha: 0.2,
+                                      ),
+                                      blurRadius: 4,
+                                      offset: const Offset(0, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: const Icon(
+                                  Icons.camera_alt,
+                                  color: Colors.white,
+                                  size: 20,
+                                ),
                               ),
                             ),
                           ),
@@ -222,6 +297,13 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                               const SizedBox(width: 16),
                               ElevatedButton(
                                 onPressed: _isLoading ? null : _updateProfile,
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.deepPurple,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                ),
                                 child:
                                     _isLoading
                                         ? const SizedBox(
@@ -229,6 +311,7 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                                           height: 20,
                                           child: CircularProgressIndicator(
                                             strokeWidth: 2,
+                                            color: Colors.white,
                                           ),
                                         )
                                         : const Text('Save'),
@@ -289,10 +372,10 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                         title: const Text('Send Feedback'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
-                          // Navigate to feedback screen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Feedback feature coming soon'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const FeedbackScreen(),
                             ),
                           );
                         },
@@ -303,10 +386,10 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                         title: const Text('Help & Support'),
                         trailing: const Icon(Icons.chevron_right),
                         onTap: () {
-                          // Navigate to help screen
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Help feature coming soon'),
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => const HelpSupportScreen(),
                             ),
                           );
                         },
@@ -319,14 +402,45 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
                           style: TextStyle(color: Colors.red),
                         ),
                         onTap: () async {
-                          await ref.read(authServiceProvider).signOut();
-                          if (!mounted) return;
-                          Navigator.pushReplacement(
-                            context,
-                            MaterialPageRoute(
-                              builder: (_) => const LoginScreen(),
-                            ),
+                          final shouldLogout = await showDialog<bool>(
+                            context: context,
+                            builder:
+                                (context) => AlertDialog(
+                                  title: const Text('Logout'),
+                                  content: const Text(
+                                    'Are you sure you want to logout?',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed:
+                                          () =>
+                                              Navigator.of(context).pop(false),
+                                      child: const Text('Cancel'),
+                                    ),
+                                    ElevatedButton(
+                                      onPressed:
+                                          () => Navigator.of(context).pop(true),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: Colors.red,
+                                        foregroundColor: Colors.white,
+                                      ),
+                                      child: const Text('Logout'),
+                                    ),
+                                  ],
+                                ),
                           );
+
+                          if (shouldLogout == true && mounted) {
+                            await ref.read(authServiceProvider).signOut();
+                            if (mounted) {
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const LoginScreen(),
+                                ),
+                              );
+                            }
+                          }
                         },
                       ),
                     ],

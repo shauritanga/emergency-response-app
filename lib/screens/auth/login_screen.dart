@@ -284,7 +284,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 child: ElevatedButton(
                                   onPressed: _isLoading ? null : _signIn,
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: const Color(0xFF2979FF),
+                                    backgroundColor: Colors.deepPurple,
                                     foregroundColor: Colors.white,
                                     shape: RoundedRectangleBorder(
                                       borderRadius: BorderRadius.circular(16),

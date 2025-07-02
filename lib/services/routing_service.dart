@@ -1,34 +1,26 @@
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:emergency_response_app/models/flutter_map_models.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
 class RoutingService {
-  // Replace with your Google Maps API key
-  static const String _apiKey = 'AIzaSyDlOuo_7i3C1k1uvT73uxmarYjJ9Jps3Oc';
-  static const String _baseUrl =
-      'https://maps.googleapis.com/maps/api/directions/json';
+  static const String _baseUrl = 'https://router.project-osrm.org/route/v1';
 
-  Future<RouteResult> getRoute(LatLng origin, LatLng destination) async {
+  Future<FlutterMapRouteResult> getRoute(
+    FlutterMapLatLng origin,
+    FlutterMapLatLng destination,
+  ) async {
     final url = Uri.parse(
-      '$_baseUrl?origin=${origin.latitude},${origin.longitude}&destination=${destination.latitude},${destination.longitude}&mode=driving&key=$_apiKey',
+      '$_baseUrl/driving/${origin.longitude},${origin.latitude};${destination.longitude},${destination.latitude}?overview=full&geometries=geojson',
     );
 
     try {
       final response = await http.get(url);
       if (response.statusCode == 200) {
         final data = json.decode(response.body);
-        if (data['status'] == 'OK') {
-          final route = data['routes'][0];
-          final leg = route['legs'][0];
-          final polyline = route['overview_polyline']['points'];
-          final points = _decodePolyline(polyline);
-          return RouteResult(
-            points: points,
-            distance: leg['distance']['text'],
-            duration: leg['duration']['text'],
-          );
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          return FlutterMapRouteResult.fromJson(data);
         } else {
-          throw Exception('Directions API error: ${data['status']}');
+          throw Exception('No routes found');
         }
       } else {
         throw Exception('Failed to fetch route: ${response.statusCode}');
@@ -38,46 +30,36 @@ class RoutingService {
     }
   }
 
-  List<LatLng> _decodePolyline(String encoded) {
-    List<LatLng> points = [];
-    int index = 0, len = encoded.length;
-    int lat = 0, lng = 0;
+  /// Get route with multiple waypoints
+  Future<FlutterMapRouteResult> getRouteWithWaypoints(
+    FlutterMapLatLng origin,
+    FlutterMapLatLng destination,
+    List<FlutterMapLatLng> waypoints,
+  ) async {
+    final coordinates = [
+      origin,
+      ...waypoints,
+      destination,
+    ].map((point) => '${point.longitude},${point.latitude}').join(';');
 
-    while (index < len) {
-      int b, shift = 0, result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlat = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lat += dlat;
+    final url = Uri.parse(
+      '$_baseUrl/driving/$coordinates?overview=full&geometries=geojson',
+    );
 
-      shift = 0;
-      result = 0;
-      do {
-        b = encoded.codeUnitAt(index++) - 63;
-        result |= (b & 0x1f) << shift;
-        shift += 5;
-      } while (b >= 0x20);
-      int dlng = ((result & 1) != 0 ? ~(result >> 1) : (result >> 1));
-      lng += dlng;
-
-      points.add(LatLng(lat / 1E5, lng / 1E5));
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        if (data['routes'] != null && data['routes'].isNotEmpty) {
+          return FlutterMapRouteResult.fromJson(data);
+        } else {
+          throw Exception('No routes found');
+        }
+      } else {
+        throw Exception('Failed to fetch route: ${response.statusCode}');
+      }
+    } catch (e) {
+      throw Exception('Error fetching route: $e');
     }
-
-    return points;
   }
-}
-
-class RouteResult {
-  final List<LatLng> points;
-  final String distance;
-  final String duration;
-
-  RouteResult({
-    required this.points,
-    required this.distance,
-    required this.duration,
-  });
 }

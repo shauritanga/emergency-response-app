@@ -1,4 +1,5 @@
 import 'package:emergency_response_app/providers/notification_provider.dart';
+import 'package:emergency_response_app/screens/common/notification_settings_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -64,13 +65,18 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
       await ref
           .read(notificationServiceProvider)
           .updateNotificationPreferences(_userId!, _role!, preferences);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Preferences saved')));
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Preferences saved')));
+      }
     } catch (e) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error: $e')));
+      }
     } finally {
       setState(() {
         _isLoading = false;
@@ -130,6 +136,29 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                     ElevatedButton(
                       onPressed: _savePreferences,
                       child: const Text('Save Preferences'),
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Advanced Notification Settings Button
+                    Card(
+                      child: ListTile(
+                        leading: const Icon(Icons.settings_outlined),
+                        title: const Text('Advanced Notification Settings'),
+                        subtitle: const Text(
+                          'Configure detailed notification preferences',
+                        ),
+                        trailing: const Icon(Icons.chevron_right),
+                        onTap: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder:
+                                  (_) => const NotificationSettingsScreen(),
+                            ),
+                          );
+                        },
+                      ),
                     ),
                   ],
                 ),

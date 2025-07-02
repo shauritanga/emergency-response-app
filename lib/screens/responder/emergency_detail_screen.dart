@@ -1,11 +1,14 @@
 import 'package:emergency_response_app/providers/emergency_provider.dart';
 import 'package:emergency_response_app/providers/location_provider.dart';
 import 'package:emergency_response_app/providers/routing_provider.dart';
+import 'package:emergency_response_app/models/flutter_map_models.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:flutter_map/flutter_map.dart';
+import 'package:emergency_response_app/config/flutter_map_config.dart';
 import '../../models/emergency.dart';
 import '../../widgets/emergency_chat_widget.dart';
+import '../../widgets/emergency_images_widget.dart';
 
 class EmergencyDetailScreen extends ConsumerStatefulWidget {
   final Emergency emergency;
@@ -23,9 +26,9 @@ class EmergencyDetailScreen extends ConsumerStatefulWidget {
 }
 
 class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
-  GoogleMapController? mapController;
-  LatLng? _userLocation;
-  List<LatLng> _routePoints = [];
+  MapController? mapController;
+  FlutterMapLatLng? _userLocation;
+  List<FlutterMapLatLng> _routePoints = [];
   String? _distance;
   String? _duration;
   String? _error;
@@ -52,7 +55,7 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
       }
 
       setState(() {
-        _userLocation = LatLng(location.latitude!, location.longitude!);
+        _userLocation = FlutterMapLatLng(location.latitude!, location.longitude!);
       });
 
       // Get route from user's location to emergency
@@ -60,7 +63,7 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
           .read(routingServiceProvider)
           .getRoute(
             _userLocation!,
-            LatLng(widget.emergency.latitude, widget.emergency.longitude),
+            FlutterMapLatLng(widget.emergency.latitude, widget.emergency.longitude),
           );
 
       setState(() {
@@ -70,29 +73,21 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
         _isLoading = false;
       });
 
+      // Add markers and route to map
+      await _addMarkersAndRoute();
+
       // Adjust map bounds to show both user and emergency locations
       if (mapController != null && _userLocation != null) {
-        final bounds = LatLngBounds(
-          southwest: LatLng(
-            _userLocation!.latitude < widget.emergency.latitude
-                ? _userLocation!.latitude
-                : widget.emergency.latitude,
-            _userLocation!.longitude < widget.emergency.longitude
-                ? _userLocation!.longitude
-                : widget.emergency.longitude,
-          ),
-          northeast: LatLng(
-            _userLocation!.latitude > widget.emergency.latitude
-                ? _userLocation!.latitude
-                : widget.emergency.latitude,
-            _userLocation!.longitude > widget.emergency.longitude
-                ? _userLocation!.longitude
-                : widget.emergency.longitude,
-          ),
+        final emergencyLocation = FlutterMapLatLng(
+          widget.emergency.latitude,
+          widget.emergency.longitude,
         );
-        mapController!.animateCamera(
-          CameraUpdate.newLatLngBounds(bounds, 50), // 50px padding
+        final bounds = FlutterMapBounds.fromPoints(
+          _userLocation!,
+          emergencyLocation,
         );
+
+        mapController?.move(bounds.center, 14.0);
       }
     } catch (e) {
       setState(() {
@@ -102,35 +97,33 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
     }
   }
 
-  void _onMapCreated(GoogleMapController controller) {
+  void _onMapCreated(MapController controller) {
     mapController = controller;
+
+    // Add markers and route after map is created
+    _addMarkersAndRoute();
+
     // Trigger map bounds update after map is created
     if (!_isLoading && _userLocation != null) {
-      final bounds = LatLngBounds(
-        southwest: LatLng(
-          _userLocation!.latitude < widget.emergency.latitude
-              ? _userLocation!.latitude
-              : widget.emergency.latitude,
-          _userLocation!.longitude < widget.emergency.longitude
-              ? _userLocation!.longitude
-              : widget.emergency.longitude,
-        ),
-        northeast: LatLng(
-          _userLocation!.latitude > widget.emergency.latitude
-              ? _userLocation!.latitude
-              : widget.emergency.latitude,
-          _userLocation!.longitude > widget.emergency.longitude
-              ? _userLocation!.longitude
-              : widget.emergency.longitude,
-        ),
+      final emergencyLocation = FlutterMapLatLng(
+        widget.emergency.latitude,
+        widget.emergency.longitude,
       );
-      controller.animateCamera(CameraUpdate.newLatLngBounds(bounds, 50));
+      final bounds = FlutterMapBounds.fromPoints(_userLocation!, emergencyLocation);
+
+      controller.move(bounds.center, 14.0);
     }
+  }
+
+  Future<void> _addMarkersAndRoute() async {
+    if (mapController == null) return;
+
+    // Markers and routes will be handled by the widget tree in Flutter Map
   }
 
   @override
   Widget build(BuildContext context) {
-    final emergencyLatLng = LatLng(
+    final emergencyLocation = FlutterMapLatLng(
       widget.emergency.latitude,
       widget.emergency.longitude,
     );
@@ -146,45 +139,60 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
                     // Map Section
                     SizedBox(
                       height: 300,
-                      child: GoogleMap(
-                        onMapCreated: _onMapCreated,
-                        initialCameraPosition: CameraPosition(
-                          target: emergencyLatLng,
-                          zoom: 14,
+                      child: FlutterMap(
+                        mapController: mapController,
+                        options: MapOptions(
+                          center: emergencyLocation,
+                          zoom: 14.0,
+                          onMapReady: () {
+                            _onMapCreated(mapController!);
+                          },
                         ),
-                        markers: {
-                          Marker(
-                            markerId: const MarkerId('emergency'),
-                            position: emergencyLatLng,
-                            infoWindow: InfoWindow(
-                              title: '${widget.emergency.type} Emergency',
-                              snippet: widget.emergency.description,
-                            ),
+                        children: [
+                          TileLayer(
+                            urlTemplate: FlutterMapConfig.openStreetMapUrl,
+                            userAgentPackageName: 'com.example.app',
                           ),
-                          if (_userLocation != null)
-                            Marker(
-                              markerId: const MarkerId('user'),
-                              position: _userLocation!,
-                              icon: BitmapDescriptor.defaultMarkerWithHue(
-                                BitmapDescriptor.hueBlue,
+                          MarkerLayer(
+                            markers: [
+                              FlutterMapMarker(
+                                id: 'emergency',
+                                position: emergencyLocation,
+                                title: '${widget.emergency.type} Emergency',
+                                snippet: widget.emergency.description,
+                              ).toMarker(),
+                              if (_userLocation != null)
+                                FlutterMapMarker(
+                                  id: 'user_location',
+                                  position: _userLocation!,
+                                  title: 'Your Location',
+                                ).toMarker(),
+                            ],
+                          ),
+                          CircleLayer(
+                            circles: [
+                              CircleMarker(
+                                point: emergencyLocation,
+                                radius: 100, // 100 meters radius for emergency area
+                                useRadiusInMeter: true,
+                                color: Colors.red.withOpacity(0.3),
+                                borderColor: Colors.red,
+                                borderStrokeWidth: 2,
                               ),
-                              infoWindow: const InfoWindow(
-                                title: 'Your Location',
-                              ),
-                            ),
-                        },
-                        polylines: {
+                            ],
+                          ),
                           if (_routePoints.isNotEmpty)
-                            Polyline(
-                              polylineId: const PolylineId('route'),
-                              points: _routePoints,
-                              color: Colors.blue,
-                              width: 5,
+                            PolylineLayer(
+                              polylines: [
+                                FlutterMapPolyline(
+                                  id: 'route',
+                                  points: _routePoints,
+                                  color: Colors.deepPurple,
+                                  strokeWidth: 5.0,
+                                ).toPolyline(),
+                              ],
                             ),
-                        },
-                        myLocationEnabled: true,
-                        myLocationButtonEnabled: true,
-                        zoomControlsEnabled: true,
+                        ],
                       ),
                     ),
 
@@ -227,7 +235,9 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
                                 padding: const EdgeInsets.only(top: 8.0),
                                 child: Text(
                                   _error!,
-                                  style: const TextStyle(color: Colors.red),
+                                  style: const TextStyle(
+                                    color: Colors.deepPurple,
+                                  ),
                                 ),
                               ),
                             if (widget.isResponder)
@@ -261,6 +271,19 @@ class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
                         ),
                       ),
                     ),
+
+                    // Emergency Images Widget
+                    widget.emergency.imageUrls.isNotEmpty
+                        ? EmergencyImagesWidget(
+                            imageUrls: widget.emergency.imageUrls,
+                          )
+                        : const Padding(
+                            padding: EdgeInsets.all(16.0),
+                            child: Text(
+                              'No images available for this emergency.',
+                              style: TextStyle(color: Colors.grey),
+                            ),
+                          ),
 
                     // Emergency Chat Widget
                     EmergencyChatWidget(emergencyId: widget.emergency.id),

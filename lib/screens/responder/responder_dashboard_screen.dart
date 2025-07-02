@@ -29,11 +29,11 @@ class ResponderDashboardScreen extends ConsumerWidget {
   Color _getDepartmentColor(String department) {
     switch (department) {
       case 'Medical':
-        return Colors.red;
+        return Colors.deepPurple;
       case 'Fire':
-        return Colors.orange;
+        return Colors.purple;
       case 'Police':
-        return Colors.blue;
+        return Colors.indigo;
       default:
         return Colors.grey;
     }
@@ -42,11 +42,11 @@ class ResponderDashboardScreen extends ConsumerWidget {
   Color _getTypeColor(String type) {
     switch (type) {
       case 'Medical':
-        return Colors.red;
+        return Colors.deepPurple;
       case 'Fire':
-        return Colors.orange;
+        return Colors.purple;
       case 'Police':
-        return Colors.blue;
+        return Colors.indigo;
       default:
         return Colors.grey;
     }
@@ -55,9 +55,9 @@ class ResponderDashboardScreen extends ConsumerWidget {
   Color _getStatusColor(String status) {
     switch (status) {
       case 'Pending':
-        return Colors.orange;
+        return Colors.deepPurple;
       case 'In Progress':
-        return Colors.blue;
+        return Colors.purple;
       case 'Resolved':
         return Colors.green;
       default:
@@ -324,7 +324,7 @@ class ResponderDashboardScreen extends ConsumerWidget {
                               context,
                               title: 'Update Profile',
                               icon: HugeIcons.strokeRoundedUserAccount,
-                              color: Colors.blue,
+                              color: Colors.deepPurple,
                               onTap: () {
                                 Navigator.push(
                                   context,

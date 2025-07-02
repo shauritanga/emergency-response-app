@@ -98,19 +98,19 @@ class EmergencyStatusScreen extends ConsumerWidget {
     switch (type) {
       case 'Medical':
         iconData = Icons.local_hospital;
-        iconColor = Colors.red;
+        iconColor = Colors.deepPurple;
         break;
       case 'Fire':
         iconData = Icons.fire_extinguisher;
-        iconColor = Colors.orange;
+        iconColor = Colors.purple;
         break;
       case 'Police':
         iconData = Icons.local_police;
-        iconColor = Colors.blue;
+        iconColor = Colors.indigo;
         break;
       default:
         iconData = Icons.warning;
-        iconColor = Colors.amber;
+        iconColor = Colors.deepPurple;
     }
 
     return CircleAvatar(
@@ -125,11 +125,11 @@ class EmergencyStatusScreen extends ConsumerWidget {
 
     switch (status) {
       case 'Pending':
-        color = Colors.orange;
+        color = Colors.deepPurple;
         label = 'Pending';
         break;
       case 'In Progress':
-        color = Colors.blue;
+        color = Colors.purple;
         label = 'In Progress';
         break;
       case 'Resolved':

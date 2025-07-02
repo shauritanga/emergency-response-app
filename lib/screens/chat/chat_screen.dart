@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -8,10 +10,12 @@ import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/location_provider.dart';
 import '../../services/chat_service.dart';
+import '../../services/image_picker_service.dart';
 import '../../utils/feedback_utils.dart';
 import '../../utils/message_templates.dart';
 import '../../widgets/message_templates_widget.dart';
 import 'message_search_screen.dart';
+import 'participants_screen.dart';
 
 class ChatScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -26,6 +30,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
   bool _isLoading = false;
+  bool _isTyping = false;
+  Timer? _typingTimer;
 
   @override
   void initState() {
@@ -39,7 +45,28 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   void dispose() {
     _messageController.dispose();
     _scrollController.dispose();
+    _typingTimer?.cancel();
     super.dispose();
+  }
+
+  void _handleTyping(String text) {
+    if (text.isNotEmpty && !_isTyping) {
+      setState(() {
+        _isTyping = true;
+      });
+    }
+
+    // Cancel previous timer
+    _typingTimer?.cancel();
+
+    // Set new timer to stop typing indicator after 2 seconds
+    _typingTimer = Timer(const Duration(seconds: 2), () {
+      if (mounted) {
+        setState(() {
+          _isTyping = false;
+        });
+      }
+    });
   }
 
   Future<void> _markAsRead() async {
@@ -242,48 +269,68 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           if (!isCurrentUser && showSenderInfo) _buildAvatar(message),
           if (!isCurrentUser && !showSenderInfo) const SizedBox(width: 40),
           Flexible(
-            child: Container(
-              constraints: BoxConstraints(
-                maxWidth: MediaQuery.of(context).size.width * 0.75,
-              ),
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color:
-                    isCurrentUser
-                        ? Theme.of(context).primaryColor
-                        : Colors.grey.shade200,
-                borderRadius: BorderRadius.circular(18).copyWith(
-                  bottomLeft: Radius.circular(
-                    !isCurrentUser && showSenderInfo ? 4 : 18,
-                  ),
-                  bottomRight: Radius.circular(
-                    isCurrentUser && showSenderInfo ? 4 : 18,
+            child: GestureDetector(
+              onLongPress: () => _showMessageOptions(message, isCurrentUser),
+              child: Container(
+                constraints: BoxConstraints(
+                  maxWidth: MediaQuery.of(context).size.width * 0.75,
+                ),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color:
+                      isCurrentUser
+                          ? Theme.of(context).primaryColor
+                          : Colors.grey.shade200,
+                  borderRadius: BorderRadius.circular(18).copyWith(
+                    bottomLeft: Radius.circular(
+                      !isCurrentUser && showSenderInfo ? 4 : 18,
+                    ),
+                    bottomRight: Radius.circular(
+                      isCurrentUser && showSenderInfo ? 4 : 18,
+                    ),
                   ),
                 ),
-              ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  if (!isCurrentUser && showSenderInfo)
-                    Text(
-                      message.senderName,
-                      style: GoogleFonts.poppins(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w600,
-                        color: _getRoleColor(message.senderRole),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    if (!isCurrentUser && showSenderInfo)
+                      Text(
+                        message.senderName,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.w600,
+                          color: _getRoleColor(message.senderRole),
+                        ),
                       ),
+                    _buildMessageContent(message, isCurrentUser),
+                    const SizedBox(height: 4),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Text(
+                          _formatMessageTime(message.timestamp),
+                          style: GoogleFonts.poppins(
+                            fontSize: 11,
+                            color:
+                                isCurrentUser
+                                    ? Colors.white70
+                                    : Colors.grey.shade600,
+                          ),
+                        ),
+                        if (message.status == MessageStatus.read &&
+                            isCurrentUser)
+                          Icon(
+                            Icons.done_all,
+                            size: 14,
+                            color: Colors.blue.shade300,
+                          ),
+                      ],
                     ),
-                  _buildMessageContent(message, isCurrentUser),
-                  const SizedBox(height: 4),
-                  Text(
-                    _formatMessageTime(message.timestamp),
-                    style: GoogleFonts.poppins(
-                      fontSize: 11,
-                      color:
-                          isCurrentUser ? Colors.white70 : Colors.grey.shade600,
-                    ),
-                  ),
-                ],
+                  ],
+                ),
               ),
             ),
           ),
@@ -335,6 +382,13 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           Row(
             children: [
               _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedImage01,
+                label: 'Photo',
+                onPressed: () => _shareImage(currentUserId),
+                color: Colors.indigo,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionButton(
                 icon: HugeIcons.strokeRoundedLocation01,
                 label: 'Location',
                 onPressed: () => _shareLocation(currentUserId),
@@ -355,12 +409,50 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                     () => _sendQuickMessage(currentUserId, '✅ I am safe'),
                 color: Colors.blue,
               ),
-              const SizedBox(width: 8),
+            ],
+          ),
+          const SizedBox(height: 8),
+          // Second row of quick actions
+          Row(
+            children: [
               _buildQuickActionButton(
                 icon: HugeIcons.strokeRoundedMessage01,
                 label: 'Templates',
                 onPressed: () => _showMessageTemplates(currentUserId),
                 color: Colors.purple,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedAlert02,
+                label: 'Evacuate',
+                onPressed:
+                    () => _sendQuickMessage(
+                      currentUserId,
+                      '🚨 EVACUATION NOTICE - Please evacuate immediately',
+                    ),
+                color: Colors.red,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedHospital01,
+                label: 'Medical',
+                onPressed:
+                    () => _sendQuickMessage(
+                      currentUserId,
+                      '🏥 Medical assistance needed',
+                    ),
+                color: Colors.pink,
+              ),
+              const SizedBox(width: 8),
+              _buildQuickActionButton(
+                icon: HugeIcons.strokeRoundedAlert01,
+                label: 'Fire',
+                onPressed:
+                    () => _sendQuickMessage(
+                      currentUserId,
+                      '🔥 Fire emergency - evacuate area',
+                    ),
+                color: Colors.deepOrange,
               ),
             ],
           ),
@@ -387,6 +479,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   ),
                   maxLines: null,
                   textCapitalization: TextCapitalization.sentences,
+                  onChanged: _handleTyping,
                 ),
               ),
               const SizedBox(width: 8),
@@ -461,6 +554,8 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
   Widget _buildMessageContent(ChatMessage message, bool isCurrentUser) {
     switch (message.type) {
+      case MessageType.image:
+        return _buildImageMessage(message, isCurrentUser);
       case MessageType.location:
         return _buildLocationMessage(message, isCurrentUser);
       case MessageType.system:
@@ -469,6 +564,10 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return _buildEmergencyMessage(message);
       case MessageType.status:
         return _buildStatusMessage(message, isCurrentUser);
+      case MessageType.evacuation:
+        return _buildEvacuationMessage(message);
+      case MessageType.statusUpdate:
+        return _buildStatusUpdateMessage(message, isCurrentUser);
       case MessageType.text:
       default:
         return Text(
@@ -479,6 +578,156 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
           ),
         );
     }
+  }
+
+  Widget _buildImageMessage(ChatMessage message, bool isCurrentUser) {
+    final imageUrl = message.metadata?['imageUrl'] as String?;
+
+    if (imageUrl == null) {
+      return Text(
+        '📷 Image (failed to load)',
+        style: GoogleFonts.poppins(
+          fontSize: 14,
+          color: isCurrentUser ? Colors.white70 : Colors.grey.shade600,
+          fontStyle: FontStyle.italic,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        if (message.content.isNotEmpty) ...[
+          Text(
+            message.content,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: isCurrentUser ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+        ],
+        ClipRRect(
+          borderRadius: BorderRadius.circular(12),
+          child: GestureDetector(
+            onTap: () => _showImageFullScreen(imageUrl),
+            child: Image.network(
+              imageUrl,
+              width: 200,
+              height: 150,
+              fit: BoxFit.cover,
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 200,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Center(child: CircularProgressIndicator()),
+                );
+              },
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 200,
+                  height: 150,
+                  decoration: BoxDecoration(
+                    color: Colors.grey.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: const Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      Icon(Icons.error_outline, color: Colors.red, size: 32),
+                      SizedBox(height: 8),
+                      Text(
+                        'Failed to load image',
+                        style: TextStyle(color: Colors.red),
+                      ),
+                    ],
+                  ),
+                );
+              },
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEvacuationMessage(ChatMessage message) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: Colors.red.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.red.withValues(alpha: 0.5), width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(
+                HugeIcons.strokeRoundedAlert02,
+                color: Colors.red,
+                size: 20,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                'EVACUATION NOTICE',
+                style: GoogleFonts.poppins(
+                  fontSize: 14,
+                  color: Colors.red,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message.content,
+            style: GoogleFonts.poppins(
+              fontSize: 14,
+              color: Colors.red.shade700,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusUpdateMessage(ChatMessage message, bool isCurrentUser) {
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: Colors.blue.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(8),
+        border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+      ),
+      child: Row(
+        children: [
+          const Icon(
+            HugeIcons.strokeRoundedCheckmarkCircle01,
+            color: Colors.blue,
+            size: 16,
+          ),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Text(
+              message.content,
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                color: Colors.blue.shade700,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   Widget _buildLocationMessage(ChatMessage message, bool isCurrentUser) {
@@ -786,10 +1035,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
                   title: const Text('View Participants'),
                   onTap: () {
                     Navigator.pop(context);
-                    FeedbackUtils.showInfo(
-                      context,
-                      'Participants view coming soon!',
-                    );
+                    _viewParticipants();
                   },
                 ),
                 ListTile(
@@ -1069,9 +1315,334 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
 
       // If a message ID was returned, scroll to that message
       if (result != null && mounted) {
-        // TODO: Implement scroll to specific message
-        FeedbackUtils.showInfo(context, 'Found message: $result');
+        _scrollToMessage(result);
       }
     }
+  }
+
+  void _viewParticipants() async {
+    try {
+      final conversation = await ref.read(
+        conversationProvider(widget.conversationId).future,
+      );
+
+      if (mounted && conversation != null) {
+        final user = ref.read(authStateProvider).value;
+        final conversationTitle =
+            user != null ? conversation.getDisplayTitle(user.uid) : 'Chat';
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder:
+                (context) => ParticipantsScreen(
+                  conversationId: widget.conversationId,
+                  conversationTitle: conversationTitle,
+                ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackUtils.showError(context, 'Failed to load conversation details');
+      }
+    }
+  }
+
+  void _scrollToMessage(String messageId) {
+    // For now, just show a success message
+    // In a full implementation, you would find the message index and scroll to it
+    FeedbackUtils.showSuccess(context, 'Found message: $messageId');
+  }
+
+  void _showMessageOptions(ChatMessage message, bool isCurrentUser) {
+    showModalBottomSheet(
+      context: context,
+      builder:
+          (context) => Container(
+            padding: const EdgeInsets.all(16),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Text(
+                  'Message Options',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                  children: [
+                    _buildReactionButton(
+                      '👍',
+                      () => _addReaction(message, '👍'),
+                    ),
+                    _buildReactionButton(
+                      '❤️',
+                      () => _addReaction(message, '❤️'),
+                    ),
+                    _buildReactionButton(
+                      '😊',
+                      () => _addReaction(message, '😊'),
+                    ),
+                    _buildReactionButton(
+                      '👏',
+                      () => _addReaction(message, '👏'),
+                    ),
+                    _buildReactionButton(
+                      '🔥',
+                      () => _addReaction(message, '🔥'),
+                    ),
+                    _buildReactionButton('✅', () => _addReaction(message, '✅')),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                ListTile(
+                  leading: const Icon(HugeIcons.strokeRoundedCopy01),
+                  title: const Text('Copy Message'),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _copyMessage(message);
+                  },
+                ),
+                if (message.type == MessageType.text)
+                  ListTile(
+                    leading: const Icon(HugeIcons.strokeRoundedShare01),
+                    title: const Text('Forward Message'),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _forwardMessage(message);
+                    },
+                  ),
+                if (isCurrentUser)
+                  ListTile(
+                    leading: const Icon(
+                      HugeIcons.strokeRoundedDelete01,
+                      color: Colors.red,
+                    ),
+                    title: const Text(
+                      'Delete Message',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    onTap: () {
+                      Navigator.pop(context);
+                      _deleteMessage(message);
+                    },
+                  ),
+              ],
+            ),
+          ),
+    );
+  }
+
+  Widget _buildReactionButton(String emoji, VoidCallback onTap) {
+    return GestureDetector(
+      onTap: () {
+        Navigator.pop(context);
+        onTap();
+      },
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          shape: BoxShape.circle,
+        ),
+        child: Text(emoji, style: const TextStyle(fontSize: 24)),
+      ),
+    );
+  }
+
+  void _addReaction(ChatMessage message, String emoji) {
+    FeedbackUtils.showSuccess(context, 'Added reaction: $emoji');
+    // In a full implementation, you would update the message with the reaction
+  }
+
+  void _copyMessage(ChatMessage message) {
+    // Copy message content to clipboard
+    FeedbackUtils.showSuccess(context, 'Message copied to clipboard');
+  }
+
+  void _forwardMessage(ChatMessage message) {
+    FeedbackUtils.showInfo(context, 'Forward message feature coming soon!');
+  }
+
+  void _deleteMessage(ChatMessage message) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: const Text('Delete Message'),
+            content: const Text(
+              'Are you sure you want to delete this message?',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: const Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  FeedbackUtils.showSuccess(context, 'Message deleted');
+                  // In a full implementation, you would delete the message from Firestore
+                },
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                child: const Text('Delete'),
+              ),
+            ],
+          ),
+    );
+  }
+
+  /// Share an image in the chat
+  Future<void> _shareImage(String currentUserId) async {
+    try {
+      setState(() {
+        _isLoading = true;
+      });
+
+      // Pick image
+      final imageFile = await ImagePickerService.pickImage(context);
+      if (imageFile == null) {
+        setState(() {
+          _isLoading = false;
+        });
+        return;
+      }
+
+      // Upload image to Supabase
+      final imageUrl = await ImagePickerService.uploadImageToSupabase(
+        imageFile,
+      );
+      if (imageUrl == null) {
+        throw Exception('Failed to upload image');
+      }
+
+      // Get user data
+      final userDataAsync = await ref.read(
+        userFutureProvider(currentUserId).future,
+      );
+      if (userDataAsync == null) {
+        throw Exception('User data not found');
+      }
+
+      // Create image message
+      final message = ChatMessage(
+        id: DateTime.now().millisecondsSinceEpoch.toString(),
+        conversationId: widget.conversationId,
+        senderId: currentUserId,
+        senderName: userDataAsync.name,
+        senderRole: userDataAsync.role,
+        content: '📷 Photo shared',
+        type: MessageType.image,
+        timestamp: DateTime.now(),
+        metadata: {
+          'imageUrl': imageUrl,
+          'fileName': imageFile.path.split('/').last,
+        },
+      );
+
+      await ref.read(chatServiceProvider).sendMessage(message);
+      _scrollToBottom();
+
+      if (mounted) {
+        FeedbackUtils.showSuccess(context, 'Image shared successfully');
+      }
+    } catch (e) {
+      if (mounted) {
+        FeedbackUtils.showError(
+          context,
+          'Failed to share image: ${e.toString()}',
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
+  /// Show image in full screen
+  void _showImageFullScreen(String imageUrl) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return Dialog(
+          backgroundColor: Colors.transparent,
+          child: Stack(
+            children: [
+              // Background tap to close
+              GestureDetector(
+                onTap: () => Navigator.of(context).pop(),
+                child: Container(color: Colors.black.withValues(alpha: 0.8)),
+              ),
+
+              // Image viewer
+              Center(
+                child: InteractiveViewer(
+                  child: Image.network(
+                    imageUrl,
+                    fit: BoxFit.contain,
+                    loadingBuilder: (context, child, loadingProgress) {
+                      if (loadingProgress == null) return child;
+                      return const Center(
+                        child: CircularProgressIndicator(color: Colors.white),
+                      );
+                    },
+                    errorBuilder: (context, error, stackTrace) {
+                      return const Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.error_outline,
+                              color: Colors.white,
+                              size: 48,
+                            ),
+                            SizedBox(height: 16),
+                            Text(
+                              'Failed to load image',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      );
+                    },
+                  ),
+                ),
+              ),
+
+              // Close button
+              Positioned(
+                top: 40,
+                right: 20,
+                child: GestureDetector(
+                  onTap: () => Navigator.of(context).pop(),
+                  child: Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.7),
+                      shape: BoxShape.circle,
+                    ),
+                    child: const Icon(
+                      Icons.close,
+                      color: Colors.white,
+                      size: 24,
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
   }
 }

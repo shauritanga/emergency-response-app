@@ -1,5 +1,4 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:cloud_functions/cloud_functions.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -8,6 +7,7 @@ import '../models/conversation.dart';
 import '../models/message.dart';
 import '../models/user.dart';
 import 'chat_service.dart';
+import 'enhanced_notification_service.dart';
 
 class EmergencyService {
   final CollectionReference _emergencies = FirebaseFirestore.instance
@@ -18,6 +18,25 @@ class EmergencyService {
     await _emergencies.doc(emergency.id).set(emergency.toMap());
 
     // Create emergency chat room
+    await _createEmergencyChat(emergency);
+  }
+
+  /// Get a specific emergency by ID
+  Future<Emergency?> getEmergency(String emergencyId) async {
+    try {
+      final doc = await _emergencies.doc(emergencyId).get();
+      if (doc.exists) {
+        return Emergency.fromMap(doc.data() as Map<String, dynamic>);
+      }
+      return null;
+    } catch (e) {
+      debugPrint('Error getting emergency: $e');
+      return null;
+    }
+  }
+
+  /// Public method to create emergency chat
+  Future<void> createEmergencyChat(Emergency emergency) async {
     await _createEmergencyChat(emergency);
   }
 
@@ -112,20 +131,16 @@ class EmergencyService {
 
   Future<void> notifyEmergency(Emergency emergency) async {
     try {
-      final functions = FirebaseFunctions.instance;
-      final callable = functions.httpsCallable('notifyEmergency');
+      // Use enhanced notification service instead of cloud functions
+      await EnhancedNotificationService.triggerEmergencyNotifications(
+        emergency,
+      );
 
-      final result = await callable.call({
-        'emergencyId': emergency.id,
-        'type': emergency.type,
-        'latitude': emergency.latitude,
-        'longitude': emergency.longitude,
-        'description': emergency.description,
-      });
-
-      debugPrint('Notification sent successfully: ${result.data}');
+      debugPrint(
+        'Emergency notifications triggered successfully for: ${emergency.id}',
+      );
     } catch (e) {
-      debugPrint('Error triggering notification: $e');
+      debugPrint('Error triggering emergency notifications: $e');
       rethrow;
     }
   }

@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
 import '../models/conversation.dart';
 import '../models/message.dart';
+import 'push_notification_service.dart';
 import '../models/user.dart';
 import '../utils/network_utils.dart';
 
@@ -21,9 +22,12 @@ class ChatService {
         .where('isActive', isEqualTo: true)
         .orderBy('lastMessageTime', descending: true)
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => Conversation.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Conversation.fromMap(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Get messages for a specific conversation
@@ -35,9 +39,12 @@ class ChatService {
         .orderBy('timestamp', descending: true)
         .limit(50) // Load last 50 messages initially
         .snapshots()
-        .map((snapshot) => snapshot.docs
-            .map((doc) => ChatMessage.fromMap(doc.data()))
-            .toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => ChatMessage.fromMap(doc.data()))
+                  .toList(),
+        );
   }
 
   /// Send a message to a conversation
@@ -64,12 +71,14 @@ class ChatService {
         final conversationDoc = await conversationRef.get();
         if (conversationDoc.exists) {
           final conversation = Conversation.fromMap(conversationDoc.data()!);
-          
+
           // Update unread counts for all participants except sender
-          final updatedUnreadCounts = Map<String, int>.from(conversation.unreadCounts);
+          final updatedUnreadCounts = Map<String, int>.from(
+            conversation.unreadCounts,
+          );
           for (final participantId in conversation.participantIds) {
             if (participantId != message.senderId) {
-              updatedUnreadCounts[participantId] = 
+              updatedUnreadCounts[participantId] =
                   (updatedUnreadCounts[participantId] ?? 0) + 1;
             }
           }
@@ -84,6 +93,28 @@ class ChatService {
 
         await batch.commit();
         debugPrint('Message sent successfully: ${message.id}');
+
+        // Send push notifications to other participants
+        if (conversationDoc.exists) {
+          final conversation = Conversation.fromMap(conversationDoc.data()!);
+          final otherParticipants =
+              conversation.participantIds
+                  .where((id) => id != message.senderId)
+                  .toList();
+
+          if (otherParticipants.isNotEmpty) {
+            await PushNotificationService.sendChatNotification(
+              conversationId: message.conversationId,
+              senderId: message.senderId,
+              senderName: message.senderName,
+              content: message.content,
+              participantIds: otherParticipants,
+              isEmergency:
+                  message.type == MessageType.emergency ||
+                  message.type == MessageType.evacuation,
+            );
+          }
+        }
       });
     } catch (e) {
       debugPrint('Failed to send message: $e');
@@ -144,11 +175,13 @@ class ChatService {
   }) async {
     try {
       await NetworkUtils.executeWithConnectivityCheck(() async {
-        await _firestore.collection('conversations').doc(conversationId).update({
-          'participantIds': FieldValue.arrayUnion([userId]),
-          'participantNames.$userId': userName,
-          'participantRoles.$userId': userRole,
-        });
+        await _firestore.collection('conversations').doc(conversationId).update(
+          {
+            'participantIds': FieldValue.arrayUnion([userId]),
+            'participantNames.$userId': userName,
+            'participantRoles.$userId': userRole,
+          },
+        );
 
         // Send system message about user joining
         final systemMessage = ChatMessage(
@@ -179,12 +212,14 @@ class ChatService {
   }) async {
     try {
       await NetworkUtils.executeWithConnectivityCheck(() async {
-        await _firestore.collection('conversations').doc(conversationId).update({
-          'participantIds': FieldValue.arrayRemove([userId]),
-          'participantNames.$userId': FieldValue.delete(),
-          'participantRoles.$userId': FieldValue.delete(),
-          'unreadCounts.$userId': FieldValue.delete(),
-        });
+        await _firestore.collection('conversations').doc(conversationId).update(
+          {
+            'participantIds': FieldValue.arrayRemove([userId]),
+            'participantNames.$userId': FieldValue.delete(),
+            'participantRoles.$userId': FieldValue.delete(),
+            'unreadCounts.$userId': FieldValue.delete(),
+          },
+        );
 
         // Send system message about user leaving
         final systemMessage = ChatMessage(
@@ -215,11 +250,13 @@ class ChatService {
     try {
       await NetworkUtils.executeWithConnectivityCheck(() async {
         // Reset unread count for this user
-        await _firestore.collection('conversations').doc(conversationId).update({
-          'unreadCounts.$userId': 0,
-        });
+        await _firestore.collection('conversations').doc(conversationId).update(
+          {'unreadCounts.$userId': 0},
+        );
 
-        debugPrint('Messages marked as read for user: $userId in $conversationId');
+        debugPrint(
+          'Messages marked as read for user: $userId in $conversationId',
+        );
       });
     } catch (e) {
       debugPrint('Failed to mark messages as read: $e');
@@ -231,10 +268,11 @@ class ChatService {
   Future<Conversation?> getConversation(String conversationId) async {
     try {
       return await NetworkUtils.executeWithConnectivityCheck(() async {
-        final doc = await _firestore
-            .collection('conversations')
-            .doc(conversationId)
-            .get();
+        final doc =
+            await _firestore
+                .collection('conversations')
+                .doc(conversationId)
+                .get();
 
         if (doc.exists) {
           return Conversation.fromMap(doc.data()!);
@@ -257,15 +295,16 @@ class ChatService {
     try {
       return await NetworkUtils.executeWithConnectivityCheck(() async {
         // Check if conversation already exists
-        final existingQuery = await _firestore
-            .collection('conversations')
-            .where('type', isEqualTo: ConversationType.direct.name)
-            .where('participantIds', arrayContains: user1Id)
-            .get();
+        final existingQuery =
+            await _firestore
+                .collection('conversations')
+                .where('type', isEqualTo: ConversationType.direct.name)
+                .where('participantIds', arrayContains: user1Id)
+                .get();
 
         for (final doc in existingQuery.docs) {
           final conversation = Conversation.fromMap(doc.data());
-          if (conversation.participantIds.contains(user2Id) && 
+          if (conversation.participantIds.contains(user2Id) &&
               conversation.participantIds.length == 2) {
             return conversation.id;
           }
@@ -275,14 +314,8 @@ class ChatService {
         return await createConversation(
           type: ConversationType.direct,
           participantIds: [user1Id, user2Id],
-          participantNames: {
-            user1Id: user1.name,
-            user2Id: user2.name,
-          },
-          participantRoles: {
-            user1Id: user1.role,
-            user2Id: user2.role,
-          },
+          participantNames: {user1Id: user1.name, user2Id: user2.name},
+          participantRoles: {user1Id: user1.role, user2Id: user2.role},
           createdBy: user1Id,
         );
       });
@@ -296,9 +329,9 @@ class ChatService {
   Future<void> archiveConversation(String conversationId) async {
     try {
       await NetworkUtils.executeWithConnectivityCheck(() async {
-        await _firestore.collection('conversations').doc(conversationId).update({
-          'isActive': false,
-        });
+        await _firestore.collection('conversations').doc(conversationId).update(
+          {'isActive': false},
+        );
         debugPrint('Conversation archived: $conversationId');
       });
     } catch (e) {
@@ -311,11 +344,12 @@ class ChatService {
   Future<int> getTotalUnreadCount(String userId) async {
     try {
       return await NetworkUtils.executeWithConnectivityCheck(() async {
-        final snapshot = await _firestore
-            .collection('conversations')
-            .where('participantIds', arrayContains: userId)
-            .where('isActive', isEqualTo: true)
-            .get();
+        final snapshot =
+            await _firestore
+                .collection('conversations')
+                .where('participantIds', arrayContains: userId)
+                .where('isActive', isEqualTo: true)
+                .get();
 
         int totalUnread = 0;
         for (final doc in snapshot.docs) {
