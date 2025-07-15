@@ -4,7 +4,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/emergency.dart';
 import '../models/conversation.dart';
-import '../models/message.dart';
 import '../models/user.dart';
 import 'chat_service.dart';
 import 'enhanced_notification_service.dart';
@@ -79,28 +78,30 @@ class EmergencyService {
         participantRoles: participantRoles,
         createdBy: emergency.userId,
         emergencyId: emergency.id,
-        title: 'Emergency #${emergency.id.substring(0, 8)}',
+        title:
+            'Emergency #${emergency.id.length > 8 ? emergency.id.substring(0, 8) : emergency.id}',
         description: '${emergency.type} emergency - ${emergency.description}',
       );
 
-      // Send initial system message
-      final systemMessage = ChatMessage(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
-        conversationId: conversationId,
-        senderId: 'system',
-        senderName: 'Emergency System',
-        senderRole: 'system',
-        content:
-            '🚨 Emergency reported: ${emergency.type}\n'
-            'Location: ${emergency.latitude}, ${emergency.longitude}\n'
-            'Description: ${emergency.description}\n\n'
-            'Emergency responders have been notified.',
-        type: MessageType.emergency,
-        timestamp: DateTime.now(),
-        emergencyId: emergency.id,
-      );
+      // Emergency system messages are disabled for cleaner chat interface
+      // Users can see emergency details in the emergency status screen instead
+      // final systemMessage = ChatMessage(
+      //   id: DateTime.now().millisecondsSinceEpoch.toString(),
+      //   conversationId: conversationId,
+      //   senderId: 'emergency_system',
+      //   senderName: 'Emergency System',
+      //   senderRole: 'admin',
+      //   content:
+      //       '🚨 Emergency reported: ${emergency.type}\n'
+      //       'Location: ${emergency.latitude}, ${emergency.longitude}\n'
+      //       'Description: ${emergency.description}\n\n'
+      //       'Emergency responders have been notified.',
+      //   type: MessageType.emergency,
+      //   timestamp: DateTime.now(),
+      //   emergencyId: emergency.id,
+      // );
 
-      await _chatService.sendMessage(systemMessage);
+      // await _chatService.sendMessage(systemMessage);
 
       debugPrint(
         'Emergency chat created: $conversationId for emergency: ${emergency.id}',
@@ -260,7 +261,7 @@ class EmergencyService {
   Stream<List<Emergency>> getResponderHistory(String userId) {
     return _emergencies
         .where('responderIds', arrayContains: userId)
-        .where('status', whereIn: ['In Progress', 'Resolved'])
+        .where('status', isEqualTo: 'Resolved')
         .snapshots()
         .map(
           (snapshot) =>
@@ -271,6 +272,55 @@ class EmergencyService {
                   )
                   .toList(),
         );
+  }
+
+  /// Get mock emergency history for development/offline testing
+  static List<Emergency> getMockResponderHistory(String userId) {
+    final now = DateTime.now();
+    return [
+      Emergency(
+        id: 'mock_emergency_1',
+        userId: 'citizen_123',
+        type: 'Fire',
+        description: 'Apartment building fire on 5th floor',
+        latitude: 40.713,
+        longitude: -74.006,
+        status: 'Resolved',
+        timestamp: now.subtract(const Duration(hours: 2)),
+        responderIds: [userId],
+        imageUrls: [
+          'https://images.unsplash.com/photo-1574870111867-089730e5a72b?w=400',
+        ],
+      ),
+      Emergency(
+        id: 'mock_emergency_2',
+        userId: 'citizen_456',
+        type: 'Medical',
+        description: 'Cardiac arrest patient',
+        latitude: 40.748,
+        longitude: -73.986,
+        status: 'Resolved',
+        timestamp: now.subtract(const Duration(days: 1)),
+        responderIds: [userId],
+        imageUrls: [
+          'https://images.unsplash.com/photo-1559757148-5c350d0d3c56?w=400',
+        ],
+      ),
+      Emergency(
+        id: 'mock_emergency_3',
+        userId: 'citizen_789',
+        type: 'Police',
+        description: 'Armed robbery in progress',
+        latitude: 40.758,
+        longitude: -73.979,
+        status: 'Resolved',
+        timestamp: now.subtract(const Duration(days: 3)),
+        responderIds: [userId],
+        imageUrls: [
+          'https://images.unsplash.com/photo-1551698618-1dfe5d97d256?w=400',
+        ],
+      ),
+    ];
   }
 }
 

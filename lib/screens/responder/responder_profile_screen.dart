@@ -90,7 +90,7 @@ class _ResponderProfileScreenState
       });
 
       // Pick image
-      final imageFile = await ImagePickerService.pickImage(context);
+      final imageFile = await ImagePickerService.pickImageSafely(context);
       if (imageFile == null) {
         setState(() {
           _isLoading = false;

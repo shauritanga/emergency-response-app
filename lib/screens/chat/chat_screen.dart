@@ -4,12 +4,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
-import '../../models/conversation.dart';
 import '../../models/message.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/chat_provider.dart';
 import '../../providers/location_provider.dart';
-import '../../services/chat_service.dart';
 import '../../services/image_picker_service.dart';
 import '../../utils/feedback_utils.dart';
 import '../../utils/message_templates.dart';
@@ -165,7 +163,42 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
   }
 
   Widget _buildMessageList(List<ChatMessage> messages, String currentUserId) {
-    if (messages.isEmpty) {
+    // Debug: Print all messages to see what's still showing
+    for (final message in messages) {
+      final contentPreview =
+          message.content.length > 50
+              ? '${message.content.substring(0, 50)}...'
+              : message.content;
+      debugPrint('🔍 Message: $contentPreview');
+      debugPrint('   Type: ${message.type}');
+      debugPrint('   SenderId: ${message.senderId}');
+      debugPrint('   SenderName: ${message.senderName}');
+      debugPrint('   SenderRole: ${message.senderRole}');
+      debugPrint('---');
+    }
+
+    // Filter out system messages AND emergency system messages
+    final filteredMessages =
+        messages.where((message) {
+          // Remove system type messages
+          if (message.type == MessageType.system) {
+            return false;
+          }
+
+          // Remove messages from emergency_system sender
+          if (message.senderId == 'emergency_system') {
+            return false;
+          }
+
+          // Remove messages from system sender
+          if (message.senderId == 'system') {
+            return false;
+          }
+
+          return true;
+        }).toList();
+
+    if (filteredMessages.isEmpty) {
       return _buildEmptyState();
     }
 
@@ -173,12 +206,12 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       controller: _scrollController,
       reverse: true,
       padding: const EdgeInsets.all(16),
-      itemCount: messages.length,
+      itemCount: filteredMessages.length,
       itemBuilder: (context, index) {
-        final message = messages[index];
+        final message = filteredMessages[index];
         final isCurrentUser = message.senderId == currentUserId;
         final showSenderInfo = _shouldShowSenderInfo(
-          messages,
+          filteredMessages,
           index,
           currentUserId,
         );
@@ -558,10 +591,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return _buildImageMessage(message, isCurrentUser);
       case MessageType.location:
         return _buildLocationMessage(message, isCurrentUser);
-      case MessageType.system:
-        return _buildSystemMessage(message);
-      case MessageType.emergency:
-        return _buildEmergencyMessage(message);
       case MessageType.status:
         return _buildStatusMessage(message, isCurrentUser);
       case MessageType.evacuation:
@@ -802,79 +831,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
     );
   }
 
-  Widget _buildSystemMessage(ChatMessage message) {
-    return Container(
-      padding: const EdgeInsets.all(8),
-      decoration: BoxDecoration(
-        color: Colors.orange.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Row(
-        children: [
-          const Icon(
-            HugeIcons.strokeRoundedAlert02,
-            color: Colors.orange,
-            size: 16,
-          ),
-          const SizedBox(width: 8),
-          Expanded(
-            child: Text(
-              message.content,
-              style: GoogleFonts.poppins(
-                fontSize: 14,
-                color: Colors.orange.shade700,
-                fontWeight: FontWeight.w500,
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildEmergencyMessage(ChatMessage message) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.red.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(8),
-        border: Border.all(color: Colors.red.withValues(alpha: 0.3)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              const Icon(
-                HugeIcons.strokeRoundedAlert02,
-                color: Colors.red,
-                size: 16,
-              ),
-              const SizedBox(width: 8),
-              Text(
-                'EMERGENCY ALERT',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: Colors.red,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message.content,
-            style: GoogleFonts.poppins(
-              fontSize: 14,
-              color: Colors.red.shade700,
-              fontWeight: FontWeight.w500,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
   Widget _buildStatusMessage(ChatMessage message, bool isCurrentUser) {
     Color statusColor = Colors.blue;
     IconData statusIcon = HugeIcons.strokeRoundedCheckmarkCircle01;
@@ -942,8 +898,6 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
         return Colors.purple;
       case 'citizen':
         return Colors.green;
-      case 'system':
-        return Colors.orange;
       default:
         return Colors.grey;
     }
@@ -1504,7 +1458,7 @@ class _ChatScreenState extends ConsumerState<ChatScreen> {
       });
 
       // Pick image
-      final imageFile = await ImagePickerService.pickImage(context);
+      final imageFile = await ImagePickerService.pickImageSafely(context);
       if (imageFile == null) {
         setState(() {
           _isLoading = false;

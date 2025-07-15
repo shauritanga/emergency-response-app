@@ -4,8 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/emergency_provider.dart';
-import '../../widgets/chat_dashboard_widget.dart';
-import '../../widgets/emergency_chat_widget.dart';
 import 'emergency_report_screen.dart';
 
 class CitizenDashboardScreen extends ConsumerWidget {
@@ -61,12 +59,6 @@ class CitizenDashboardScreen extends ConsumerWidget {
             children: [
               // Emergency Status Card
               _buildEmergencyStatusCard(context, userEmergenciesAsync),
-
-              // Chat Dashboard
-              const ChatDashboardWidget(),
-
-              // Active Emergency Chats
-              _buildActiveEmergencyChats(context, userEmergenciesAsync),
 
               // Quick Actions
               _buildQuickActionsCard(context),
@@ -188,46 +180,6 @@ class CitizenDashboardScreen extends ConsumerWidget {
       },
       loading: () => _buildLoadingCard(),
       error: (_, __) => _buildErrorCard('Unable to load emergency status'),
-    );
-  }
-
-  Widget _buildActiveEmergencyChats(
-    BuildContext context,
-    AsyncValue<List<dynamic>> emergenciesAsync,
-  ) {
-    return emergenciesAsync.when(
-      data: (emergencies) {
-        final activeEmergencies =
-            emergencies.where((e) => e.status != 'Resolved').toList();
-
-        if (activeEmergencies.isEmpty) {
-          return const SizedBox.shrink();
-        }
-
-        return Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16),
-              child: Text(
-                'Emergency Chats',
-                style: GoogleFonts.poppins(
-                  fontSize: 18,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-            ),
-            ...activeEmergencies.map(
-              (emergency) => EmergencyChatWidget(
-                emergencyId: emergency.id,
-                showQuickActions: false,
-              ),
-            ),
-          ],
-        );
-      },
-      loading: () => const SizedBox.shrink(),
-      error: (_, __) => const SizedBox.shrink(),
     );
   }
 

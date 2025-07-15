@@ -3,7 +3,6 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../models/conversation.dart';
-import '../models/emergency.dart';
 import '../models/message.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
@@ -30,167 +29,92 @@ class EmergencyChatWidget extends ConsumerWidget {
     final user = ref.watch(authStateProvider).value;
     if (user == null) return const SizedBox.shrink();
 
-    return FutureBuilder<Conversation?>(
-      future: EmergencyChatHelper.findEmergencyConversation(emergencyId),
-      builder: (context, snapshot) {
-        if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Center(child: CircularProgressIndicator());
+    // Get emergency details to check status
+    final emergencyAsync = ref.watch(emergencyProvider(emergencyId));
+
+    return emergencyAsync.when(
+      data: (emergency) {
+        // Hide chat functionality if emergency is resolved
+        if (emergency?.status == 'Resolved') {
+          return Padding(
+            padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+            child: _buildResolvedEmergencyMessage(),
+          );
         }
 
-        final conversation = snapshot.data;
+        return FutureBuilder<Conversation?>(
+          future: EmergencyChatHelper.findEmergencyConversation(emergencyId),
+          builder: (context, snapshot) {
+            if (snapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
 
-        return Card(
-          margin: const EdgeInsets.all(16),
-          elevation: 2,
-          child: Padding(
-            padding: const EdgeInsets.all(16),
+            final conversation = snapshot.data;
+
+            return Padding(
+              padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  if (conversation != null) ...[
+                    _buildActionButtons(context, ref, conversation, user.uid),
+                  ] else ...[
+                    _buildNoConversationState(context, ref, user.uid),
+                  ],
+                ],
+              ),
+            );
+          },
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, stack) => const SizedBox.shrink(),
+    );
+  }
+
+  Widget _buildResolvedEmergencyMessage() {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.green.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(
+          color: Colors.green.withValues(alpha: 0.3),
+          width: 1,
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.check_circle, color: Colors.green[600], size: 24),
+          const SizedBox(width: 12),
+          Expanded(
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
+              mainAxisSize: MainAxisSize.min,
               children: [
-                _buildHeader(context, conversation),
-                const SizedBox(height: 12),
-                if (conversation != null) ...[
-                  _buildConversationInfo(context, conversation, user.uid),
-                  const SizedBox(height: 12),
-                  _buildActionButtons(context, ref, conversation, user.uid),
-                ] else ...[
-                  _buildNoConversationState(context, ref, user.uid),
-                ],
+                Text(
+                  'Emergency Resolved',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    fontWeight: FontWeight.w600,
+                    color: Colors.green[700],
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Flexible(
+                  child: Text(
+                    'This emergency has been resolved. Chat is no longer available.',
+                    style: GoogleFonts.poppins(
+                      fontSize: 12,
+                      color: Colors.green[600],
+                    ),
+                    maxLines: 2,
+                    overflow: TextOverflow.ellipsis,
+                  ),
+                ),
               ],
             ),
           ),
-        );
-      },
-    );
-  }
-
-  Widget _buildHeader(BuildContext context, Conversation? conversation) {
-    return Row(
-      children: [
-        Container(
-          padding: const EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: Colors.red.withOpacity(0.1),
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: const Icon(
-            HugeIcons.strokeRoundedMessage01,
-            color: Colors.red,
-            size: 20,
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                'Emergency Chat',
-                style: GoogleFonts.poppins(
-                  fontSize: 16,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                conversation != null
-                    ? 'Active conversation'
-                    : 'No active conversation',
-                style: GoogleFonts.poppins(
-                  fontSize: 12,
-                  color: conversation != null ? Colors.green : Colors.grey,
-                ),
-              ),
-            ],
-          ),
-        ),
-        if (conversation != null)
-          Container(
-            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-            decoration: BoxDecoration(
-              color: Colors.green.withOpacity(0.1),
-              borderRadius: BorderRadius.circular(12),
-            ),
-            child: Text(
-              'ACTIVE',
-              style: GoogleFonts.poppins(
-                fontSize: 10,
-                fontWeight: FontWeight.w600,
-                color: Colors.green,
-              ),
-            ),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildConversationInfo(
-    BuildContext context,
-    Conversation conversation,
-    String userId,
-  ) {
-    final unreadCount = conversation.getUnreadCount(userId);
-
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: Colors.grey.shade50,
-        borderRadius: BorderRadius.circular(8),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            children: [
-              Expanded(
-                child: Text(
-                  conversation.getDisplayTitle(userId),
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                  ),
-                ),
-              ),
-              if (unreadCount > 0)
-                Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.red,
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Text(
-                    unreadCount.toString(),
-                    style: GoogleFonts.poppins(
-                      color: Colors.white,
-                      fontSize: 12,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-          const SizedBox(height: 4),
-          Text(
-            '${conversation.participantCount} participants',
-            style: GoogleFonts.poppins(
-              fontSize: 12,
-              color: Colors.grey.shade600,
-            ),
-          ),
-          if (conversation.lastMessage.isNotEmpty) ...[
-            const SizedBox(height: 8),
-            Text(
-              'Last: ${conversation.lastMessage}',
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.grey.shade700,
-              ),
-              maxLines: 2,
-              overflow: TextOverflow.ellipsis,
-            ),
-          ],
         ],
       ),
     );
@@ -249,7 +173,7 @@ class EmergencyChatWidget extends ConsumerWidget {
         Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.orange.withOpacity(0.1),
+            color: Colors.orange.withValues(alpha: 0.1),
             borderRadius: BorderRadius.circular(8),
           ),
           child: Row(

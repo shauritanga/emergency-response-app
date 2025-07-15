@@ -4,7 +4,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../models/message.dart';
 import '../../providers/message_search_provider.dart';
-import '../../utils/feedback_utils.dart';
 
 class MessageSearchScreen extends ConsumerStatefulWidget {
   final String conversationId;
@@ -17,7 +16,8 @@ class MessageSearchScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<MessageSearchScreen> createState() => _MessageSearchScreenState();
+  ConsumerState<MessageSearchScreen> createState() =>
+      _MessageSearchScreenState();
 }
 
 class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
@@ -34,7 +34,9 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
   Widget build(BuildContext context) {
     final searchState = ref.watch(messageSearchProvider);
     final suggestions = ref.watch(searchSuggestionsProvider);
-    final filteredResults = ref.watch(filteredSearchResultsProvider(_selectedFilter));
+    final filteredResults = ref.watch(
+      filteredSearchResultsProvider(_selectedFilter),
+    );
 
     return Scaffold(
       appBar: AppBar(
@@ -50,10 +52,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
             ),
             Text(
               widget.conversationTitle,
-              style: GoogleFonts.poppins(
-                fontSize: 12,
-                color: Colors.white70,
-              ),
+              style: GoogleFonts.poppins(fontSize: 12, color: Colors.white70),
             ),
           ],
         ),
@@ -84,15 +83,18 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                     hintText: 'Search messages...',
                     hintStyle: GoogleFonts.poppins(color: Colors.grey.shade500),
                     prefixIcon: const Icon(HugeIcons.strokeRoundedSearch01),
-                    suffixIcon: _searchController.text.isNotEmpty
-                        ? IconButton(
-                            onPressed: () {
-                              _searchController.clear();
-                              ref.read(messageSearchProvider.notifier).clearSearch();
-                            },
-                            icon: const Icon(HugeIcons.strokeRoundedCancel01),
-                          )
-                        : null,
+                    suffixIcon:
+                        _searchController.text.isNotEmpty
+                            ? IconButton(
+                              onPressed: () {
+                                _searchController.clear();
+                                ref
+                                    .read(messageSearchProvider.notifier)
+                                    .clearSearch();
+                              },
+                              icon: const Icon(HugeIcons.strokeRoundedCancel01),
+                            )
+                            : null,
                     border: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(12),
                       borderSide: BorderSide.none,
@@ -103,16 +105,15 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                   onChanged: (query) {
                     setState(() {});
                     if (query.isNotEmpty) {
-                      ref.read(messageSearchProvider.notifier).searchMessages(
-                            widget.conversationId,
-                            query,
-                          );
+                      ref
+                          .read(messageSearchProvider.notifier)
+                          .searchMessages(widget.conversationId, query);
                     } else {
                       ref.read(messageSearchProvider.notifier).clearSearch();
                     }
                   },
                 ),
-                
+
                 // Filter chips
                 if (searchState.results.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -124,7 +125,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
                         _buildFilterChip('Emergency', 'emergency'),
                         _buildFilterChip('Location', 'location'),
                         _buildFilterChip('Status', 'status'),
-                        _buildFilterChip('System', 'system'),
                       ],
                     ),
                   ),
@@ -135,7 +135,11 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
 
           // Search results
           Expanded(
-            child: _buildSearchContent(searchState, filteredResults, suggestions),
+            child: _buildSearchContent(
+              searchState,
+              filteredResults,
+              suggestions,
+            ),
           ),
         ],
       ),
@@ -183,32 +187,37 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
           Wrap(
             spacing: 8,
             runSpacing: 8,
-            children: suggestions.map((suggestion) {
-              return InkWell(
-                onTap: () {
-                  _searchController.text = suggestion;
-                  ref.read(messageSearchProvider.notifier).searchMessages(
-                        widget.conversationId,
+            children:
+                suggestions.map((suggestion) {
+                  return InkWell(
+                    onTap: () {
+                      _searchController.text = suggestion;
+                      ref
+                          .read(messageSearchProvider.notifier)
+                          .searchMessages(widget.conversationId, suggestion);
+                    },
+                    child: Container(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 12,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: Colors.blue.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.blue.withValues(alpha: 0.3),
+                        ),
+                      ),
+                      child: Text(
                         suggestion,
-                      );
-                },
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                  decoration: BoxDecoration(
-                    color: Colors.blue.withValues(alpha: 0.1),
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                  ),
-                  child: Text(
-                    suggestion,
-                    style: GoogleFonts.poppins(
-                      color: Colors.blue,
-                      fontWeight: FontWeight.w500,
+                        style: GoogleFonts.poppins(
+                          color: Colors.blue,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
                     ),
-                  ),
-                ),
-              );
-            }).toList(),
+                  );
+                }).toList(),
           ),
         ],
       ),
@@ -316,7 +325,9 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       child: ListTile(
         leading: CircleAvatar(
-          backgroundColor: _getMessageTypeColor(message.type).withValues(alpha: 0.1),
+          backgroundColor: _getMessageTypeColor(
+            message.type,
+          ).withValues(alpha: 0.1),
           child: Icon(
             _getMessageTypeIcon(message.type),
             color: _getMessageTypeColor(message.type),
@@ -325,10 +336,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         ),
         title: Text(
           message.senderName,
-          style: GoogleFonts.poppins(
-            fontWeight: FontWeight.w500,
-            fontSize: 14,
-          ),
+          style: GoogleFonts.poppins(fontWeight: FontWeight.w500, fontSize: 14),
         ),
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
@@ -359,7 +367,7 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
 
   Widget _buildFilterChip(String label, String filter) {
     final isSelected = _selectedFilter == filter;
-    
+
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(
@@ -392,8 +400,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         return Colors.green;
       case MessageType.status:
         return Colors.blue;
-      case MessageType.system:
-        return Colors.orange;
       case MessageType.text:
       default:
         return Colors.grey;
@@ -408,8 +414,6 @@ class _MessageSearchScreenState extends ConsumerState<MessageSearchScreen> {
         return HugeIcons.strokeRoundedLocation01;
       case MessageType.status:
         return HugeIcons.strokeRoundedCheckmarkCircle01;
-      case MessageType.system:
-        return HugeIcons.strokeRoundedSettings01;
       case MessageType.text:
       default:
         return HugeIcons.strokeRoundedMessage01;

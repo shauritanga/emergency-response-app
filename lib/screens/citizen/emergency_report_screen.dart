@@ -1,7 +1,7 @@
 import 'dart:io';
+
 import 'package:emergency_response_app/providers/emergency_provider.dart';
 import 'package:emergency_response_app/providers/location_provider.dart';
-import 'package:emergency_response_app/providers/notification_provider.dart';
 import 'package:emergency_response_app/providers/image_picker_provider.dart';
 import 'package:emergency_response_app/services/image_picker_service.dart';
 import 'package:emergency_response_app/screens/citizen/setting_screen.dart';
@@ -53,9 +53,18 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
   }
 
   Future<void> _reportEmergency() async {
-    if (_selectedType == null || _descriptionController.text.isEmpty) {
+    final selectedImages = ref.read(selectedImagesProvider);
+
+    if (_selectedType == null) {
       setState(() {
-        _error = 'Please select emergency type and provide a description';
+        _error = 'Please select emergency type';
+      });
+      return;
+    }
+
+    if (selectedImages.isEmpty) {
+      setState(() {
+        _error = 'Please add at least one image';
       });
       return;
     }
@@ -330,7 +339,7 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          'Describe what happened',
+                          'Describe what happened (Optional)',
                           style: GoogleFonts.poppins(
                             fontSize: 14,
                             color: isDarkMode ? Colors.white70 : Colors.black54,
@@ -340,7 +349,8 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
                         TextField(
                           controller: _descriptionController,
                           decoration: InputDecoration(
-                            hintText: 'Provide details about the emergency...',
+                            hintText:
+                                'Provide additional details (optional)...',
                             hintStyle: GoogleFonts.poppins(
                               color:
                                   isDarkMode ? Colors.white38 : Colors.black38,
@@ -388,7 +398,7 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
 
                 // Image Selection Section
                 Text(
-                  'Add Photos (Optional)',
+                  'Add Photos (Required)',
                   style: GoogleFonts.poppins(
                     fontSize: 18,
                     fontWeight: FontWeight.w600,
@@ -591,57 +601,141 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  'Selected Images (${selectedImages.length}/5)',
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    fontWeight: FontWeight.w500,
-                    color: isDarkMode ? Colors.white : Colors.black87,
-                  ),
+                Row(
+                  children: [
+                    Icon(Icons.photo_library, color: Colors.green, size: 20),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Selected Images (${selectedImages.length}/5)',
+                      style: GoogleFonts.poppins(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w500,
+                        color: isDarkMode ? Colors.white : Colors.black87,
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 8),
-                SizedBox(
-                  height: 80,
-                  child: ListView.builder(
-                    scrollDirection: Axis.horizontal,
-                    itemCount: selectedImages.length,
-                    itemBuilder: (context, index) {
-                      return Padding(
-                        padding: const EdgeInsets.only(right: 8.0),
-                        child: Stack(
-                          children: [
-                            ClipRRect(
-                              borderRadius: BorderRadius.circular(8),
-                              child: Image.file(
-                                selectedImages[index],
-                                width: 80,
-                                height: 80,
-                                fit: BoxFit.cover,
-                              ),
-                            ),
-                            Positioned(
-                              top: 4,
-                              right: 4,
-                              child: GestureDetector(
-                                onTap: () => _removeImage(index),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.green.withValues(alpha: 0.1),
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(
+                      color: Colors.green.withValues(alpha: 0.3),
+                      width: 1,
+                    ),
+                  ),
+                  child: SizedBox(
+                    height: 100,
+                    child: ListView.builder(
+                      scrollDirection: Axis.horizontal,
+                      itemCount: selectedImages.length,
+                      itemBuilder: (context, index) {
+                        return Padding(
+                          padding: const EdgeInsets.only(right: 12.0),
+                          child: Stack(
+                            children: [
+                              GestureDetector(
+                                onTap:
+                                    () => _showImagePreview(
+                                      selectedImages[index],
+                                    ),
                                 child: Container(
-                                  padding: const EdgeInsets.all(4),
-                                  decoration: const BoxDecoration(
-                                    color: Colors.red,
-                                    shape: BoxShape.circle,
+                                  decoration: BoxDecoration(
+                                    borderRadius: BorderRadius.circular(12),
+                                    boxShadow: [
+                                      BoxShadow(
+                                        color: Colors.black.withValues(
+                                          alpha: 0.1,
+                                        ),
+                                        blurRadius: 4,
+                                        offset: const Offset(0, 2),
+                                      ),
+                                    ],
                                   ),
-                                  child: const Icon(
-                                    Icons.close,
-                                    color: Colors.white,
-                                    size: 16,
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12),
+                                    child: Image.file(
+                                      selectedImages[index],
+                                      width: 100,
+                                      height: 100,
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (
+                                        context,
+                                        error,
+                                        stackTrace,
+                                      ) {
+                                        return Container(
+                                          width: 100,
+                                          height: 100,
+                                          color: Colors.grey[300],
+                                          child: const Icon(
+                                            Icons.error,
+                                            color: Colors.red,
+                                          ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               ),
-                            ),
-                          ],
-                        ),
-                      );
-                    },
+                              Positioned(
+                                top: 4,
+                                right: 4,
+                                child: GestureDetector(
+                                  onTap: () => _removeImage(index),
+                                  child: Container(
+                                    padding: const EdgeInsets.all(6),
+                                    decoration: BoxDecoration(
+                                      color: Colors.red,
+                                      shape: BoxShape.circle,
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(
+                                            alpha: 0.2,
+                                          ),
+                                          blurRadius: 4,
+                                          offset: const Offset(0, 2),
+                                        ),
+                                      ],
+                                    ),
+                                    child: const Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                      size: 16,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                              // Image index indicator
+                              Positioned(
+                                bottom: 4,
+                                left: 4,
+                                child: Container(
+                                  padding: const EdgeInsets.symmetric(
+                                    horizontal: 6,
+                                    vertical: 2,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.black.withValues(alpha: 0.7),
+                                    borderRadius: BorderRadius.circular(8),
+                                  ),
+                                  child: Text(
+                                    '${index + 1}',
+                                    style: const TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 12,
+                                      fontWeight: FontWeight.bold,
+                                    ),
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
                   ),
                 ),
               ],
@@ -652,9 +746,47 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
   }
 
   Future<void> _pickSingleImage() async {
-    final image = await ImagePickerService.pickImage(context);
+    debugPrint('🔄 Starting image capture process...');
+
+    // Show loading indicator
+    if (mounted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Opening camera...'),
+          duration: Duration(seconds: 1),
+        ),
+      );
+    }
+
+    final image = await ImagePickerService.pickImageSafely(context);
+
     if (image != null) {
+      debugPrint('✅ Image captured successfully, adding to selection');
       ref.read(selectedImagesProvider.notifier).addImage(image);
+
+      // Show success feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('📸 Photo captured successfully!'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } else {
+      debugPrint('❌ Image capture failed or was cancelled');
+
+      // Show failure feedback
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Failed to capture photo. Please try again.'),
+            backgroundColor: Colors.orange,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
     }
   }
 
@@ -667,6 +799,65 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
 
   void _removeImage(int index) {
     ref.read(selectedImagesProvider.notifier).removeImage(index);
+  }
+
+  void _showImagePreview(File imageFile) {
+    showDialog(
+      context: context,
+      builder:
+          (context) => Dialog(
+            backgroundColor: Colors.transparent,
+            child: Stack(
+              children: [
+                Center(
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(12),
+                    child: Image.file(
+                      imageFile,
+                      fit: BoxFit.contain,
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          padding: const EdgeInsets.all(20),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          child: const Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Icon(Icons.error, color: Colors.red, size: 48),
+                              SizedBox(height: 16),
+                              Text('Failed to load image'),
+                            ],
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                ),
+                Positioned(
+                  top: 40,
+                  right: 20,
+                  child: GestureDetector(
+                    onTap: () => Navigator.of(context).pop(),
+                    child: Container(
+                      padding: const EdgeInsets.all(8),
+                      decoration: const BoxDecoration(
+                        color: Colors.black54,
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.close,
+                        color: Colors.white,
+                        size: 24,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+    );
   }
 
   Widget _buildSuccessView(bool isDarkMode) {

@@ -3,9 +3,10 @@ import '../models/message.dart';
 import '../services/chat_service.dart';
 
 /// Provider for message search functionality
-final messageSearchProvider = StateNotifierProvider<MessageSearchNotifier, MessageSearchState>((ref) {
-  return MessageSearchNotifier();
-});
+final messageSearchProvider =
+    StateNotifierProvider<MessageSearchNotifier, MessageSearchState>((ref) {
+      return MessageSearchNotifier();
+    });
 
 /// State for message search
 class MessageSearchState {
@@ -53,15 +54,14 @@ class MessageSearchNotifier extends StateNotifier<MessageSearchState> {
 
     try {
       // Get all messages from the conversation
-      final messagesStream = _chatService.getConversationMessages(conversationId);
-      
+      final messagesStream = _chatService.getConversationMessages(
+        conversationId,
+      );
+
       // Listen to the first emission to get current messages
       await for (final messages in messagesStream.take(1)) {
         final filteredMessages = _filterMessages(messages, query);
-        state = state.copyWith(
-          results: filteredMessages,
-          isLoading: false,
-        );
+        state = state.copyWith(results: filteredMessages, isLoading: false);
         break;
       }
     } catch (e) {
@@ -75,18 +75,23 @@ class MessageSearchNotifier extends StateNotifier<MessageSearchState> {
   /// Filter messages based on search query
   List<ChatMessage> _filterMessages(List<ChatMessage> messages, String query) {
     final lowercaseQuery = query.toLowerCase();
-    
+
     return messages.where((message) {
+      // Filter out system messages
+      if (message.type == MessageType.system) {
+        return false;
+      }
+
       // Search in message content
       if (message.content.toLowerCase().contains(lowercaseQuery)) {
         return true;
       }
-      
+
       // Search in sender name
       if (message.senderName.toLowerCase().contains(lowercaseQuery)) {
         return true;
       }
-      
+
       // Search in metadata for location messages
       if (message.metadata != null) {
         final metadataString = message.metadata.toString().toLowerCase();
@@ -94,7 +99,7 @@ class MessageSearchNotifier extends StateNotifier<MessageSearchState> {
           return true;
         }
       }
-      
+
       return false;
     }).toList();
   }
@@ -134,14 +139,17 @@ class MessageSearchNotifier extends StateNotifier<MessageSearchState> {
 final searchQueryProvider = StateProvider<String>((ref) => '');
 
 /// Provider for search results filtering
-final filteredSearchResultsProvider = Provider.family<List<ChatMessage>, String>((ref, filter) {
+final filteredSearchResultsProvider = Provider.family<
+  List<ChatMessage>,
+  String
+>((ref, filter) {
   final searchState = ref.watch(messageSearchProvider);
   final results = searchState.results;
-  
+
   if (filter.isEmpty) {
     return results;
   }
-  
+
   switch (filter.toLowerCase()) {
     case 'emergency':
       return results.where((msg) => msg.type == MessageType.emergency).toList();
@@ -149,8 +157,6 @@ final filteredSearchResultsProvider = Provider.family<List<ChatMessage>, String>
       return results.where((msg) => msg.type == MessageType.location).toList();
     case 'status':
       return results.where((msg) => msg.type == MessageType.status).toList();
-    case 'system':
-      return results.where((msg) => msg.type == MessageType.system).toList();
     default:
       return results;
   }

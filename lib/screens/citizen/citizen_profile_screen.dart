@@ -5,8 +5,6 @@ import 'package:emergency_response_app/screens/common/help_support_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:google_fonts/google_fonts.dart';
-import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
 import '../../services/image_picker_service.dart';
 import '../../utils/feedback_utils.dart';
@@ -73,7 +71,7 @@ class _CitizenProfileScreenState extends ConsumerState<CitizenProfileScreen> {
       });
 
       // Pick image
-      final imageFile = await ImagePickerService.pickImage(context);
+      final imageFile = await ImagePickerService.pickImageSafely(context);
       if (imageFile == null) {
         setState(() {
           _isLoading = false;

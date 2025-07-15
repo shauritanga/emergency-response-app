@@ -183,19 +183,19 @@ class ChatService {
           },
         );
 
-        // Send system message about user joining
-        final systemMessage = ChatMessage(
-          id: _firestore.collection('temp').doc().id,
-          conversationId: conversationId,
-          senderId: 'system',
-          senderName: 'System',
-          senderRole: 'system',
-          content: '$userName joined the conversation',
-          type: MessageType.system,
-          timestamp: DateTime.now(),
-        );
+        // System messages are disabled - users joining is handled silently
+        // final systemMessage = ChatMessage(
+        //   id: _firestore.collection('temp').doc().id,
+        //   conversationId: conversationId,
+        //   senderId: 'system',
+        //   senderName: 'System',
+        //   senderRole: 'system',
+        //   content: '$userName joined the conversation',
+        //   type: MessageType.system,
+        //   timestamp: DateTime.now(),
+        // );
 
-        await sendMessage(systemMessage);
+        // await sendMessage(systemMessage);
         debugPrint('Participant added: $userId to $conversationId');
       });
     } catch (e) {
@@ -221,19 +221,19 @@ class ChatService {
           },
         );
 
-        // Send system message about user leaving
-        final systemMessage = ChatMessage(
-          id: _firestore.collection('temp').doc().id,
-          conversationId: conversationId,
-          senderId: 'system',
-          senderName: 'System',
-          senderRole: 'system',
-          content: '$userName left the conversation',
-          type: MessageType.system,
-          timestamp: DateTime.now(),
-        );
+        // System messages are disabled - users leaving is handled silently
+        // final systemMessage = ChatMessage(
+        //   id: _firestore.collection('temp').doc().id,
+        //   conversationId: conversationId,
+        //   senderId: 'system',
+        //   senderName: 'System',
+        //   senderRole: 'system',
+        //   content: '$userName left the conversation',
+        //   type: MessageType.system,
+        //   timestamp: DateTime.now(),
+        // );
 
-        await sendMessage(systemMessage);
+        // await sendMessage(systemMessage);
         debugPrint('Participant removed: $userId from $conversationId');
       });
     } catch (e) {

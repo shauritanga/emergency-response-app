@@ -1,5 +1,4 @@
 import 'dart:convert';
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:googleapis_auth/auth_io.dart';
 import 'package:http/http.dart' as http;
@@ -18,7 +17,7 @@ class ModernFCMService {
     try {
       // Load service account JSON from assets
       final String jsonString = await rootBundle.loadString(
-        'assets/emergency-response-app-dit-9c011cf8bcb8.json',
+        'assets/emergency-response-app-dit-firebase-adminsdk-fbsvc-f1e8212865.json',
       );
       final Map<String, dynamic> serviceAccountJson = jsonDecode(jsonString);
 
@@ -61,12 +60,12 @@ class ModernFCMService {
             "priority": "high",
             "notification": {
               "channel_id": "emergency_alerts",
-              "priority": "high",
               "default_sound": true,
               "default_vibrate_timings": true,
             },
           },
           "apns": {
+            "headers": {"apns-priority": "10"},
             "payload": {
               "aps": {
                 "alert": {"title": title, "body": body},
@@ -86,7 +85,7 @@ class ModernFCMService {
 
       if (response.statusCode == 200) {
         debugPrint(
-          '✅ FCM notification sent successfully to token: ${token.substring(0, 10)}...',
+          '✅ FCM notification sent successfully to token: ${token.length > 10 ? token.substring(0, 10) : token}...',
         );
         return true;
       } else {

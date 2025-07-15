@@ -76,7 +76,7 @@ class EmergencyChatHelper {
         emergencyId: emergencyId,
         title: 'Emergency Support Chat',
         description:
-            'Direct chat for emergency #${emergencyId.substring(0, 8)}',
+            'Direct chat for emergency #${emergencyId.length > 8 ? emergencyId.substring(0, 8) : emergencyId}',
       );
 
       debugPrint('Created emergency direct chat: $conversationId');
@@ -130,7 +130,7 @@ class EmergencyChatHelper {
         emergencyId: emergencyId,
         title: 'Emergency Broadcast',
         description:
-            'Official updates for emergency #${emergencyId.substring(0, 8)}',
+            'Official updates for emergency #${emergencyId.length > 8 ? emergencyId.substring(0, 8) : emergencyId}',
       );
 
       debugPrint('Created emergency broadcast: $conversationId');

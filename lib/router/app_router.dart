@@ -7,6 +7,7 @@ import '../screens/onboarding/onboarding_screen.dart';
 import '../screens/citizen/citizen_home_screen.dart';
 import '../screens/auth/login_screen.dart';
 import '../screens/auth/register_screen.dart';
+import '../screens/auth/role_loading_screen.dart';
 import '../screens/responder/responder_home_screen.dart';
 import '../screens/admin/admin_dashboard_screen.dart';
 import '../providers/auth_provider.dart';
@@ -17,25 +18,14 @@ final userRoleProvider = StateProvider<String?>((ref) => null);
 final routerProvider = Provider<GoRouter>((ref) {
   final authState = ref.watch(authStateProvider);
 
-  // Listen to auth state changes and update user role
+  // Listen to auth state changes and clear role when logged out
   ref.listen(authStateProvider, (previous, current) {
-    if (current.value != null) {
-      // User is logged in, fetch and store their role
-      ref.read(authServiceProvider).getUserData(current.value!.uid).then((
-        userData,
-      ) {
-        if (userData != null) {
-          ref.read(userRoleProvider.notifier).state = userData.role;
-        }
-      });
-    } else {
+    if (current.value == null) {
       // User is logged out, clear role
       ref.read(userRoleProvider.notifier).state = null;
     }
+    // Note: Role fetching is now handled by the splash screen
   });
-
-  // Get the current role
-  final userRole = ref.watch(userRoleProvider);
 
   return GoRouter(
     initialLocation: '/',
@@ -58,24 +48,9 @@ final routerProvider = Provider<GoRouter>((ref) {
         return '/auth';
       }
 
-      // If logged in and on auth routes, redirect to dashboard
+      // If logged in and on auth routes, redirect to role loading
       if (isLoggedIn && isAuthRoute) {
-        return '/dashboard';
-      }
-
-      // If logged in and on dashboard, redirect based on role
-      if (isLoggedIn && currentLocation == '/dashboard') {
-        switch (userRole) {
-          case 'responder':
-            return '/responder';
-          case 'admin':
-            return '/admin';
-          case 'citizen':
-            return '/citizen';
-          default:
-            // If role is not yet loaded, stay on current page
-            return null;
-        }
+        return '/loading-role';
       }
 
       return null; // No redirect needed
@@ -101,12 +76,10 @@ final routerProvider = Provider<GoRouter>((ref) {
         builder: (context, state) => const RegisterScreen(),
       ),
 
-      // Dashboard Route (redirects based on role)
+      // Role Loading Route
       GoRoute(
-        path: '/dashboard',
-        builder:
-            (context, state) =>
-                const SplashScreen(), // Temporary, will redirect
+        path: '/loading-role',
+        builder: (context, state) => const RoleLoadingScreen(),
       ),
 
       // Role-specific Routes

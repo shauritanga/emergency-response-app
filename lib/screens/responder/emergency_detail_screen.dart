@@ -1,16 +1,12 @@
-import 'package:emergency_response_app/providers/emergency_provider.dart';
-import 'package:emergency_response_app/providers/location_provider.dart';
-import 'package:emergency_response_app/providers/routing_provider.dart';
-import 'package:emergency_response_app/models/flutter_map_models.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:flutter_map/flutter_map.dart';
-import 'package:emergency_response_app/config/flutter_map_config.dart';
+import 'package:google_fonts/google_fonts.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models/emergency.dart';
+import '../../widgets/emergency_status_changer.dart';
 import '../../widgets/emergency_chat_widget.dart';
-import '../../widgets/emergency_images_widget.dart';
+import 'emergency_map_screen.dart';
 
-class EmergencyDetailScreen extends ConsumerStatefulWidget {
+class EmergencyDetailScreen extends StatefulWidget {
   final Emergency emergency;
   final bool isResponder;
 
@@ -21,275 +17,703 @@ class EmergencyDetailScreen extends ConsumerStatefulWidget {
   });
 
   @override
-  ConsumerState<EmergencyDetailScreen> createState() =>
-      _EmergencyDetailScreenState();
+  State<EmergencyDetailScreen> createState() => _EmergencyDetailScreenState();
 }
 
-class _EmergencyDetailScreenState extends ConsumerState<EmergencyDetailScreen> {
-  MapController? mapController;
-  FlutterMapLatLng? _userLocation;
-  List<FlutterMapLatLng> _routePoints = [];
-  String? _distance;
-  String? _duration;
-  String? _error;
-  bool _isLoading = true;
+class _EmergencyDetailScreenState extends State<EmergencyDetailScreen> {
+  int _currentImageIndex = 0;
+  final PageController _pageController = PageController();
 
   @override
-  void initState() {
-    super.initState();
-    _initializeLocationAndRoute();
-  }
-
-  Future<void> _initializeLocationAndRoute() async {
-    try {
-      // Get user's current location
-      final location =
-          await ref.read(locationServiceProvider).getCurrentLocation();
-      if (location == null) {
-        setState(() {
-          _error =
-              'Unable to get current location. Showing emergency location only.';
-          _isLoading = false;
-        });
-        return;
-      }
-
-      setState(() {
-        _userLocation = FlutterMapLatLng(location.latitude!, location.longitude!);
-      });
-
-      // Get route from user's location to emergency
-      final route = await ref
-          .read(routingServiceProvider)
-          .getRoute(
-            _userLocation!,
-            FlutterMapLatLng(widget.emergency.latitude, widget.emergency.longitude),
-          );
-
-      setState(() {
-        _routePoints = route.points;
-        _distance = route.distance;
-        _duration = route.duration;
-        _isLoading = false;
-      });
-
-      // Add markers and route to map
-      await _addMarkersAndRoute();
-
-      // Adjust map bounds to show both user and emergency locations
-      if (mapController != null && _userLocation != null) {
-        final emergencyLocation = FlutterMapLatLng(
-          widget.emergency.latitude,
-          widget.emergency.longitude,
-        );
-        final bounds = FlutterMapBounds.fromPoints(
-          _userLocation!,
-          emergencyLocation,
-        );
-
-        mapController?.move(bounds.center, 14.0);
-      }
-    } catch (e) {
-      setState(() {
-        _error = 'Error loading route: $e';
-        _isLoading = false;
-      });
-    }
-  }
-
-  void _onMapCreated(MapController controller) {
-    mapController = controller;
-
-    // Add markers and route after map is created
-    _addMarkersAndRoute();
-
-    // Trigger map bounds update after map is created
-    if (!_isLoading && _userLocation != null) {
-      final emergencyLocation = FlutterMapLatLng(
-        widget.emergency.latitude,
-        widget.emergency.longitude,
-      );
-      final bounds = FlutterMapBounds.fromPoints(_userLocation!, emergencyLocation);
-
-      controller.move(bounds.center, 14.0);
-    }
-  }
-
-  Future<void> _addMarkersAndRoute() async {
-    if (mapController == null) return;
-
-    // Markers and routes will be handled by the widget tree in Flutter Map
+  void dispose() {
+    _pageController.dispose();
+    super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    final emergencyLocation = FlutterMapLatLng(
-      widget.emergency.latitude,
-      widget.emergency.longitude,
-    );
+    final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(title: Text('${widget.emergency.type} Emergency')),
-      body:
-          _isLoading
-              ? const Center(child: CircularProgressIndicator())
-              : SingleChildScrollView(
-                child: Column(
-                  children: [
-                    // Map Section
-                    SizedBox(
-                      height: 300,
-                      child: FlutterMap(
-                        mapController: mapController,
-                        options: MapOptions(
-                          center: emergencyLocation,
-                          zoom: 14.0,
-                          onMapReady: () {
-                            _onMapCreated(mapController!);
-                          },
-                        ),
-                        children: [
-                          TileLayer(
-                            urlTemplate: FlutterMapConfig.openStreetMapUrl,
-                            userAgentPackageName: 'com.example.app',
-                          ),
-                          MarkerLayer(
-                            markers: [
-                              FlutterMapMarker(
-                                id: 'emergency',
-                                position: emergencyLocation,
-                                title: '${widget.emergency.type} Emergency',
-                                snippet: widget.emergency.description,
-                              ).toMarker(),
-                              if (_userLocation != null)
-                                FlutterMapMarker(
-                                  id: 'user_location',
-                                  position: _userLocation!,
-                                  title: 'Your Location',
-                                ).toMarker(),
-                            ],
-                          ),
-                          CircleLayer(
-                            circles: [
-                              CircleMarker(
-                                point: emergencyLocation,
-                                radius: 100, // 100 meters radius for emergency area
-                                useRadiusInMeter: true,
-                                color: Colors.red.withOpacity(0.3),
-                                borderColor: Colors.red,
-                                borderStrokeWidth: 2,
-                              ),
-                            ],
-                          ),
-                          if (_routePoints.isNotEmpty)
-                            PolylineLayer(
-                              polylines: [
-                                FlutterMapPolyline(
-                                  id: 'route',
-                                  points: _routePoints,
-                                  color: Colors.deepPurple,
-                                  strokeWidth: 5.0,
-                                ).toPolyline(),
-                              ],
-                            ),
+      body: CustomScrollView(
+        slivers: [
+          // Hero Image App Bar
+          SliverAppBar(
+            expandedHeight: 300,
+            pinned: true,
+            backgroundColor: Theme.of(context).primaryColor,
+            foregroundColor: Colors.white,
+            title: Text(
+              '${widget.emergency.type} Emergency',
+              style: GoogleFonts.poppins(
+                fontWeight: FontWeight.w600,
+                fontSize: 18,
+              ),
+            ),
+            actions: [
+              // Status Display
+              Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8, horizontal: 4),
+                child: _buildStatusDisplay(),
+              ),
+              // Status Changer for Responders
+              if (widget.isResponder)
+                EmergencyStatusChanger(
+                  emergency: widget.emergency,
+                  onStatusChanged: () => setState(() {}),
+                ),
+            ],
+            flexibleSpace: FlexibleSpaceBar(
+              background:
+                  widget.emergency.imageUrls.isNotEmpty
+                      ? _buildImageHero()
+                      : _buildEmptyImagePlaceholder(),
+            ),
+          ),
+
+          // Content Section
+          SliverToBoxAdapter(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // Image Navigation Dots (if multiple images)
+                  if (widget.emergency.imageUrls.length > 1)
+                    _buildImageIndicators(),
+
+                  const SizedBox(height: 16),
+
+                  // Emergency Information Card
+                  _buildEmergencyInfoCard(isDarkMode),
+
+                  const SizedBox(height: 16),
+
+                  // Location Card
+                  _buildLocationCard(isDarkMode),
+
+                  const SizedBox(height: 16),
+
+                  // Image Details Card (metadata, timestamp, etc.)
+                  if (widget.emergency.imageUrls.isNotEmpty)
+                    _buildImageDetailsCard(isDarkMode),
+
+                  const SizedBox(height: 16),
+
+                  // Chat Section
+                  _buildChatSection(),
+
+                  const SizedBox(height: 32),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusDisplay() {
+    Color statusColor;
+    String statusText = widget.emergency.status;
+
+    switch (widget.emergency.status.toLowerCase()) {
+      case 'pending':
+        statusColor = Colors.orange;
+        break;
+      case 'in progress':
+        statusColor = Colors.blue;
+        break;
+      case 'resolved':
+        statusColor = Colors.green;
+        break;
+      default:
+        statusColor = Colors.grey;
+    }
+
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      decoration: BoxDecoration(
+        color: statusColor.withValues(alpha: 0.2),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: statusColor),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(Icons.circle, color: statusColor, size: 8),
+          const SizedBox(width: 4),
+          Text(
+            statusText,
+            style: GoogleFonts.poppins(
+              color: statusColor,
+              fontSize: 12,
+              fontWeight: FontWeight.w500,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildImageHero() {
+    return Stack(
+      children: [
+        // Image PageView
+        PageView.builder(
+          controller: _pageController,
+          onPageChanged: (index) {
+            setState(() {
+              _currentImageIndex = index;
+            });
+          },
+          itemCount: widget.emergency.imageUrls.length,
+          itemBuilder: (context, index) {
+            return GestureDetector(
+              onTap: () => _showFullScreenImage(index),
+              child: Hero(
+                tag: 'emergency_image_$index',
+                child: Container(
+                  decoration: BoxDecoration(
+                    image: DecorationImage(
+                      image: NetworkImage(widget.emergency.imageUrls[index]),
+                      fit: BoxFit.cover,
+                    ),
+                  ),
+                  child: Container(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.transparent,
+                          Colors.black.withValues(alpha: 0.3),
                         ],
                       ),
                     ),
-
-                    // Emergency Details Card
-                    Card(
-                      margin: const EdgeInsets.all(16),
-                      elevation: 4,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              'Emergency Details',
-                              style: Theme.of(context).textTheme.titleMedium,
-                            ),
-                            const SizedBox(height: 8),
-                            Text('Type: ${widget.emergency.type}'),
-                            Text('Status: ${widget.emergency.status}'),
-                            Text(
-                              'Description: ${widget.emergency.description}',
-                            ),
-                            if (_distance != null && _duration != null) ...[
-                              const SizedBox(height: 8),
-                              Text(
-                                'Distance: $_distance',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                              Text(
-                                'Estimated Time: $_duration',
-                                style: const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                            if (_error != null)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Text(
-                                  _error!,
-                                  style: const TextStyle(
-                                    color: Colors.deepPurple,
-                                  ),
-                                ),
-                              ),
-                            if (widget.isResponder)
-                              Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: ElevatedButton(
-                                  onPressed: () async {
-                                    try {
-                                      await ref
-                                          .read(emergencyServiceProvider)
-                                          .updateEmergencyStatus(
-                                            widget.emergency.id,
-                                            widget.emergency.status == 'Pending'
-                                                ? 'In Progress'
-                                                : 'Resolved',
-                                          );
-                                    } catch (e) {
-                                      setState(() {
-                                        _error = 'Error updating status: $e';
-                                      });
-                                    }
-                                  },
-                                  child: Text(
-                                    widget.emergency.status == 'Pending'
-                                        ? 'Mark as In Progress'
-                                        : 'Mark as Resolved',
-                                  ),
-                                ),
-                              ),
-                          ],
-                        ),
-                      ),
-                    ),
-
-                    // Emergency Images Widget
-                    widget.emergency.imageUrls.isNotEmpty
-                        ? EmergencyImagesWidget(
-                            imageUrls: widget.emergency.imageUrls,
-                          )
-                        : const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Text(
-                              'No images available for this emergency.',
-                              style: TextStyle(color: Colors.grey),
-                            ),
-                          ),
-
-                    // Emergency Chat Widget
-                    EmergencyChatWidget(emergencyId: widget.emergency.id),
-                  ],
+                  ),
                 ),
               ),
+            );
+          },
+        ),
+
+        // Image Counter Badge
+        Positioned(
+          top: 50,
+          right: 16,
+          child: Container(
+            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+            decoration: BoxDecoration(
+              color: Colors.black.withValues(alpha: 0.7),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: Text(
+              '${_currentImageIndex + 1}/${widget.emergency.imageUrls.length}',
+              style: GoogleFonts.poppins(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ),
+
+        // Expand Icon
+        Positioned(
+          bottom: 16,
+          right: 16,
+          child: GestureDetector(
+            onTap: () => _showFullScreenImage(_currentImageIndex),
+            child: Container(
+              padding: const EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: Colors.black.withValues(alpha: 0.7),
+                borderRadius: BorderRadius.circular(20),
+              ),
+              child: const Icon(
+                Icons.fullscreen,
+                color: Colors.white,
+                size: 20,
+              ),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildEmptyImagePlaceholder() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            Theme.of(context).primaryColor,
+            Theme.of(context).primaryColor.withValues(alpha: 0.8),
+          ],
+        ),
+      ),
+      child: const Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.image_not_supported, size: 64, color: Colors.white70),
+            SizedBox(height: 16),
+            Text(
+              'No Images Available',
+              style: TextStyle(
+                color: Colors.white,
+                fontSize: 18,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageIndicators() {
+    return Center(
+      child: Row(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: List.generate(
+          widget.emergency.imageUrls.length,
+          (index) => Container(
+            margin: const EdgeInsets.symmetric(horizontal: 4),
+            width: _currentImageIndex == index ? 24 : 8,
+            height: 8,
+            decoration: BoxDecoration(
+              color:
+                  _currentImageIndex == index
+                      ? Theme.of(context).primaryColor
+                      : Colors.grey.withValues(alpha: 0.3),
+              borderRadius: BorderRadius.circular(4),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmergencyInfoCard(bool isDarkMode) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  _getEmergencyIcon(widget.emergency.type),
+                  color: _getEmergencyColor(widget.emergency.type),
+                  size: 24,
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    '${widget.emergency.type} Emergency',
+                    style: GoogleFonts.poppins(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: isDarkMode ? Colors.white : Colors.black87,
+                    ),
+                  ),
+                ),
+                _buildStatusDisplay(),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Text(
+              'Description',
+              style: GoogleFonts.poppins(
+                fontSize: 14,
+                fontWeight: FontWeight.w600,
+                color: Colors.grey[600],
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              widget.emergency.description,
+              style: GoogleFonts.poppins(
+                fontSize: 16,
+                color: isDarkMode ? Colors.white : Colors.black87,
+                height: 1.5,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Row(
+              children: [
+                Icon(Icons.access_time, size: 16, color: Colors.grey[600]),
+                const SizedBox(width: 8),
+                Text(
+                  'Reported ${_formatTimestamp(widget.emergency.timestamp)}',
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.grey[600],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLocationCard(bool isDarkMode) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.location_on, color: Colors.red[600], size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Location',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Coordinates: ${widget.emergency.latitude.toStringAsFixed(6)}, ${widget.emergency.longitude.toStringAsFixed(6)}',
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _openFullScreenMap(),
+                icon: const Icon(Icons.map),
+                label: const Text('View on Map'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Theme.of(context).primaryColor,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildImageDetailsCard(bool isDarkMode) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.photo_library, color: Colors.blue[600], size: 24),
+                const SizedBox(width: 12),
+                Text(
+                  'Evidence Photos',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.w600,
+                    color: isDarkMode ? Colors.white : Colors.black87,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            Text(
+              '${widget.emergency.imageUrls.length} photo${widget.emergency.imageUrls.length > 1 ? 's' : ''} attached',
+              style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey[600]),
+            ),
+            const SizedBox(height: 12),
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => _showImageGallery(),
+                icon: const Icon(Icons.photo_library),
+                label: const Text('View All Photos'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.blue[600],
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildChatSection() {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Remove fixed height constraint to allow flexible sizing
+          EmergencyChatWidget(emergencyId: widget.emergency.id),
+        ],
+      ),
+    );
+  }
+
+  // Helper Methods
+  void _showFullScreenImage(int index) {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder:
+            (context) => _FullScreenImageViewer(
+              imageUrls: widget.emergency.imageUrls,
+              initialIndex: index,
+            ),
+      ),
+    );
+  }
+
+  void _showImageGallery() {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      backgroundColor: Colors.transparent,
+      builder:
+          (context) => _ImageGallerySheet(
+            imageUrls: widget.emergency.imageUrls,
+            onImageTap: (index) {
+              Navigator.pop(context);
+              _showFullScreenImage(index);
+            },
+          ),
+    );
+  }
+
+  void _openFullScreenMap() {
+    Navigator.of(context).push(
+      MaterialPageRoute(
+        builder: (context) => EmergencyMapScreen(emergency: widget.emergency),
+      ),
+    );
+  }
+
+  void _makeEmergencyCall() async {
+    const phoneNumber = 'tel:911';
+    if (await canLaunchUrl(Uri.parse(phoneNumber))) {
+      await launchUrl(Uri.parse(phoneNumber));
+    } else {
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Could not make call')));
+      }
+    }
+  }
+
+  IconData _getEmergencyIcon(String type) {
+    switch (type.toLowerCase()) {
+      case 'medical':
+        return Icons.local_hospital;
+      case 'fire':
+        return Icons.local_fire_department;
+      case 'police':
+        return Icons.local_police;
+      default:
+        return Icons.emergency;
+    }
+  }
+
+  Color _getEmergencyColor(String type) {
+    switch (type.toLowerCase()) {
+      case 'medical':
+        return Colors.red[600]!;
+      case 'fire':
+        return Colors.orange[600]!;
+      case 'police':
+        return Colors.blue[600]!;
+      default:
+        return Colors.grey[600]!;
+    }
+  }
+
+  String _formatTimestamp(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+
+    if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} minutes ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hours ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+}
+
+// Full Screen Image Viewer
+class _FullScreenImageViewer extends StatelessWidget {
+  final List<String> imageUrls;
+  final int initialIndex;
+
+  const _FullScreenImageViewer({
+    required this.imageUrls,
+    required this.initialIndex,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      backgroundColor: Colors.black,
+      appBar: AppBar(
+        backgroundColor: Colors.transparent,
+        foregroundColor: Colors.white,
+        title: Text('${initialIndex + 1} of ${imageUrls.length}'),
+      ),
+      body: PageView.builder(
+        controller: PageController(initialPage: initialIndex),
+        itemCount: imageUrls.length,
+        itemBuilder: (context, index) {
+          return InteractiveViewer(
+            child: Center(
+              child: Hero(
+                tag: 'emergency_image_$index',
+                child: Image.network(
+                  imageUrls[index],
+                  fit: BoxFit.contain,
+                  loadingBuilder: (context, child, loadingProgress) {
+                    if (loadingProgress == null) return child;
+                    return const Center(
+                      child: CircularProgressIndicator(color: Colors.white),
+                    );
+                  },
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Center(
+                      child: Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Icon(
+                            Icons.error_outline,
+                            color: Colors.white,
+                            size: 48,
+                          ),
+                          SizedBox(height: 16),
+                          Text(
+                            'Failed to load image',
+                            style: TextStyle(color: Colors.white, fontSize: 16),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+// Image Gallery Bottom Sheet
+class _ImageGallerySheet extends StatelessWidget {
+  final List<String> imageUrls;
+  final Function(int) onImageTap;
+
+  const _ImageGallerySheet({required this.imageUrls, required this.onImageTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.6,
+      decoration: const BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      child: Column(
+        children: [
+          Container(
+            margin: const EdgeInsets.symmetric(vertical: 12),
+            width: 40,
+            height: 4,
+            decoration: BoxDecoration(
+              color: Colors.grey[300],
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16),
+            child: Text(
+              'Emergency Photos (${imageUrls.length})',
+              style: GoogleFonts.poppins(
+                fontSize: 18,
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+          ),
+          Expanded(
+            child: GridView.builder(
+              padding: const EdgeInsets.all(16),
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 3,
+                crossAxisSpacing: 8,
+                mainAxisSpacing: 8,
+              ),
+              itemCount: imageUrls.length,
+              itemBuilder: (context, index) {
+                return GestureDetector(
+                  onTap: () => onImageTap(index),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(8),
+                    child: Image.network(
+                      imageUrls[index],
+                      fit: BoxFit.cover,
+                      loadingBuilder: (context, child, loadingProgress) {
+                        if (loadingProgress == null) return child;
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        );
+                      },
+                      errorBuilder: (context, error, stackTrace) {
+                        return Container(
+                          color: Colors.grey[300],
+                          child: const Icon(
+                            Icons.error_outline,
+                            color: Colors.grey,
+                          ),
+                        );
+                      },
+                    ),
+                  ),
+                );
+              },
+            ),
+          ),
+        ],
+      ),
     );
   }
 }

@@ -6,7 +6,6 @@ import '../models/conversation.dart';
 import '../providers/auth_provider.dart';
 import '../providers/chat_provider.dart';
 import '../screens/chat/conversation_list_screen.dart';
-import '../utils/offline_cache.dart';
 
 /// Dashboard widget showing chat overview and quick actions
 class ChatDashboardWidget extends ConsumerWidget {

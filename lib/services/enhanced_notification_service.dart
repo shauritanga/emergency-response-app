@@ -1,12 +1,10 @@
 import 'dart:convert';
 import 'dart:math';
-import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
 import '../models/emergency.dart';
 import '../models/user.dart';
 import 'modern_fcm_service.dart';
@@ -74,6 +72,7 @@ class EnhancedNotificationService {
 
   /// Create notification channels for different types
   static Future<void> _createNotificationChannels() async {
+    debugPrint('Creating notification channels with sound enabled...');
     // Emergency channel - high priority
     const emergencyChannel = AndroidNotificationChannel(
       'emergency_alerts',
@@ -83,7 +82,7 @@ class EnhancedNotificationService {
       enableVibration: true,
       enableLights: true,
       ledColor: Colors.red,
-      sound: RawResourceAndroidNotificationSound('emergency_alert'),
+      playSound: true,
     );
 
     // Chat channel - normal priority
@@ -93,6 +92,7 @@ class EnhancedNotificationService {
       description: 'Chat and messaging notifications',
       importance: Importance.high,
       enableVibration: true,
+      playSound: true,
     );
 
     // Nearby alerts channel - medium priority
@@ -102,6 +102,7 @@ class EnhancedNotificationService {
       description: 'Notifications for nearby emergencies',
       importance: Importance.high,
       enableVibration: true,
+      playSound: true,
     );
 
     final plugin =
@@ -391,6 +392,7 @@ class EnhancedNotificationService {
         ledColor: Colors.red,
         autoCancel: false,
         ongoing: false,
+        playSound: true,
         styleInformation: BigTextStyleInformation(''),
       );
 
@@ -564,7 +566,7 @@ class EnhancedNotificationService {
         data: data,
       );
       debugPrint(
-        'FCM sent successfully to token: ${token.substring(0, 10)}...',
+        'FCM sent successfully to token: ${token.length > 10 ? token.substring(0, 10) : token}...',
       );
     } catch (e) {
       debugPrint('FCM send failed: $e');

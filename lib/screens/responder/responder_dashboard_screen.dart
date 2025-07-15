@@ -78,6 +78,15 @@ class ResponderDashboardScreen extends ConsumerWidget {
       ),
     );
 
+    final completedCountAsync = ref.watch(
+      completedEmergenciesCountProvider(user.uid),
+    );
+
+    // Debug: Print completed count when it changes
+    completedCountAsync.whenData((count) {
+      print('🔢 Completed emergencies count for ${user.uid}: $count');
+    });
+
     // Initialize notifications
     ref
         .read(notificationServiceProvider)
@@ -218,7 +227,11 @@ class ResponderDashboardScreen extends ConsumerWidget {
                             _buildStatCard(
                               context,
                               title: 'Completed',
-                              value: '0', // Replace with actual data
+                              value: completedCountAsync.when(
+                                data: (count) => '$count',
+                                loading: () => '...',
+                                error: (_, __) => '0',
+                              ),
                               icon: HugeIcons.strokeRoundedCheckmarkCircle01,
                               color: Colors.green,
                               isDarkMode: isDarkMode,

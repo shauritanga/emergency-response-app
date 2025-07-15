@@ -1,10 +1,9 @@
-import 'package:emergency_response_app/screens/citizen/citizen_home_screen.dart';
-import 'package:emergency_response_app/screens/responder/responder_home_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/auth_provider.dart';
+import '../../router/app_router.dart';
 import '../../utils/validation_utils.dart';
 import '../../utils/feedback_utils.dart';
 import '../../utils/auth_error_handler.dart';
@@ -67,6 +66,9 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
             department: _role == 'responder' ? _department : null,
           );
       if (user != null) {
+        // Update the role provider immediately after successful registration
+        ref.read(userRoleProvider.notifier).state = _role;
+
         // Show success message
         if (mounted) {
           FeedbackUtils.showSuccess(
@@ -78,21 +80,8 @@ class _RegisterScreenState extends ConsumerState<RegisterScreen> {
           );
         }
 
-        // Navigate to the appropriate home screen based on role
-        if (!mounted) return;
-        switch (_role) {
-          case 'responder':
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const ResponderHomeScreen()),
-            );
-            break;
-          default:
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (_) => const CitizenHomeScreen()),
-            );
-        }
+        // Let the router handle navigation based on auth state and role
+        // The router will automatically redirect to the appropriate screen
       }
     } catch (e) {
       if (mounted) {

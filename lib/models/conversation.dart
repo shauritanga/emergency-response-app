@@ -53,18 +53,21 @@ class Conversation {
       description: map['description'],
       lastMessage: map['lastMessage'] ?? '',
       lastMessageSenderId: map['lastMessageSenderId'] ?? '',
-      lastMessageTime: map['lastMessageTime'] is Timestamp
-          ? (map['lastMessageTime'] as Timestamp).toDate()
-          : DateTime.parse(map['lastMessageTime']),
+      lastMessageTime:
+          map['lastMessageTime'] is Timestamp
+              ? (map['lastMessageTime'] as Timestamp).toDate()
+              : DateTime.parse(map['lastMessageTime']),
       unreadCounts: Map<String, int>.from(map['unreadCounts'] ?? {}),
-      createdAt: map['createdAt'] is Timestamp
-          ? (map['createdAt'] as Timestamp).toDate()
-          : DateTime.parse(map['createdAt']),
+      createdAt:
+          map['createdAt'] is Timestamp
+              ? (map['createdAt'] as Timestamp).toDate()
+              : DateTime.parse(map['createdAt']),
       createdBy: map['createdBy'] ?? '',
       isActive: map['isActive'] ?? true,
-      metadata: map['metadata'] != null 
-          ? Map<String, dynamic>.from(map['metadata']) 
-          : null,
+      metadata:
+          map['metadata'] != null
+              ? Map<String, dynamic>.from(map['metadata'])
+              : null,
     );
   }
 
@@ -141,14 +144,16 @@ class Conversation {
 
     switch (type) {
       case ConversationType.emergency:
-        return emergencyId != null 
-            ? 'Emergency #${emergencyId!.substring(0, 8)}'
+        return emergencyId != null
+            ? 'Emergency #${emergencyId!.length > 8 ? emergencyId!.substring(0, 8) : emergencyId!}'
             : 'Emergency Chat';
       case ConversationType.group:
         return 'Group Chat (${participantIds.length} members)';
       case ConversationType.direct:
         // For direct chat, show the other participant's name
-        final otherParticipants = participantIds.where((id) => id != currentUserId);
+        final otherParticipants = participantIds.where(
+          (id) => id != currentUserId,
+        );
         if (otherParticipants.isNotEmpty) {
           final otherUserId = otherParticipants.first;
           return participantNames[otherUserId] ?? 'Unknown User';
@@ -179,7 +184,7 @@ class Conversation {
   }
 
   /// Check if conversation is emergency-related
-  bool get isEmergencyRelated => 
+  bool get isEmergencyRelated =>
       type == ConversationType.emergency || emergencyId != null;
 
   /// Get participant count
@@ -191,10 +196,10 @@ class Conversation {
 
 /// Types of conversations
 enum ConversationType {
-  direct,     // 1-on-1 conversation
-  group,      // Group conversation
-  emergency,  // Emergency-specific chat
-  broadcast,  // One-way broadcast from responders
+  direct, // 1-on-1 conversation
+  group, // Group conversation
+  emergency, // Emergency-specific chat
+  broadcast, // One-way broadcast from responders
 }
 
 /// Conversation participant info
@@ -220,15 +225,17 @@ class ConversationParticipant {
       userId: map['userId'] ?? '',
       name: map['name'] ?? '',
       role: map['role'] ?? '',
-      joinedAt: map['joinedAt'] is Timestamp
-          ? (map['joinedAt'] as Timestamp).toDate()
-          : DateTime.parse(map['joinedAt']),
+      joinedAt:
+          map['joinedAt'] is Timestamp
+              ? (map['joinedAt'] as Timestamp).toDate()
+              : DateTime.parse(map['joinedAt']),
       isActive: map['isActive'] ?? true,
-      lastSeen: map['lastSeen'] != null
-          ? (map['lastSeen'] is Timestamp
-              ? (map['lastSeen'] as Timestamp).toDate()
-              : DateTime.parse(map['lastSeen']))
-          : null,
+      lastSeen:
+          map['lastSeen'] != null
+              ? (map['lastSeen'] is Timestamp
+                  ? (map['lastSeen'] as Timestamp).toDate()
+                  : DateTime.parse(map['lastSeen']))
+              : null,
     );
   }
 

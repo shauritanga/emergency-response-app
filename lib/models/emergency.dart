@@ -10,6 +10,8 @@ class Emergency {
   final String status; // Pending, In Progress, Resolved
   final DateTime timestamp;
   final List<String> imageUrls; // URLs of uploaded images
+  final List<String>
+  responderIds; // IDs of responders who have worked on this emergency
 
   Emergency({
     required this.id,
@@ -21,6 +23,7 @@ class Emergency {
     required this.status,
     required this.timestamp,
     this.imageUrls = const [],
+    this.responderIds = const [],
   });
 
   Map<String, dynamic> toMap() {
@@ -34,6 +37,7 @@ class Emergency {
       'status': status,
       'timestamp': timestamp,
       'imageUrls': imageUrls,
+      'responderIds': responderIds,
     };
   }
 
@@ -48,6 +52,7 @@ class Emergency {
       status: map['status'],
       timestamp: (map['timestamp'] as Timestamp).toDate(),
       imageUrls: List<String>.from(map['imageUrls'] ?? []),
+      responderIds: List<String>.from(map['responderIds'] ?? []),
     );
   }
 }

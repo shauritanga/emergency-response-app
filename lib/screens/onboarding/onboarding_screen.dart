@@ -90,7 +90,7 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen>
     authState.when(
       data: (user) {
         if (user != null) {
-          context.go('/dashboard');
+          context.go('/');
         } else {
           context.go('/auth');
         }

@@ -8,7 +8,6 @@ import 'responder_profile_screen.dart';
 import 'responder_messages_screen.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/emergency_provider.dart';
-import '../../providers/chat_provider.dart';
 
 class ResponderHomeScreen extends ConsumerStatefulWidget {
   const ResponderHomeScreen({super.key});

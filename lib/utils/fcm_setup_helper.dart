@@ -7,7 +7,7 @@ class FCMSetupHelper {
   static Future<bool> checkServiceAccountFile() async {
     try {
       await rootBundle.loadString(
-        'assets/emergency-response-app-dit-9c011cf8bcb8.json',
+        'assets/emergency-response-app-dit-firebase-adminsdk-fbsvc-f1e8212865.json',
       );
       return true;
     } catch (e) {
@@ -36,7 +36,7 @@ class FCMSetupHelper {
                   Text('5. Click "Generate new private key"'),
                   Text('6. Download the JSON file'),
                   Text(
-                    '7. Rename it to: emergency-response-app-dit-9c011cf8bcb8.json',
+                    '7. Rename it to: emergency-response-app-dit-firebase-adminsdk-fbsvc-f1e8212865.json',
                   ),
                   Text('8. Place it in: assets/ directory'),
                   SizedBox(height: 8),
@@ -150,7 +150,7 @@ class FCMSetupHelper {
   static Future<String?> getServiceAccountContent() async {
     try {
       return await rootBundle.loadString(
-        'assets/emergency-response-app-dit-9c011cf8bcb8.json',
+        'assets/emergency-response-app-dit-firebase-adminsdk-fbsvc-f1e8212865.json',
       );
     } catch (e) {
       return null;

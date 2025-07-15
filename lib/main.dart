@@ -2,6 +2,8 @@ import 'package:emergency_response_app/router/app_router.dart';
 import 'package:emergency_response_app/config/supabase_config.dart';
 import 'package:emergency_response_app/services/supabase_auth_bridge.dart';
 import 'package:emergency_response_app/services/supabase_storage_service.dart';
+import 'package:emergency_response_app/services/geocoding_service.dart';
+import 'package:emergency_response_app/widgets/app_lifecycle_manager.dart';
 
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -37,11 +39,13 @@ void main() async {
   // Initialize Supabase storage buckets
   await SupabaseStorageService.initializeBuckets();
 
+  // Clear geocoding cache to ensure fresh results
+  GeocodingService.clearCache();
+
   // Enhanced notifications will be initialized per user
   // await EnhancedNotificationService.initialize();
 
-
-  runApp(const ProviderScope(child: MyApp()));
+  runApp(const ProviderScope(child: AppLifecycleManager(child: MyApp())));
 }
 
 class MyApp extends ConsumerWidget {

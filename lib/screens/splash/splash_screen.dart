@@ -19,6 +19,8 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   late Animation<double> _logoAnimation;
   late Animation<double> _textAnimation;
   late Animation<double> _fadeAnimation;
+  final String _loadingMessage = 'Initializing...';
+  bool _hasNavigated = false;
 
   @override
   void initState() {
@@ -68,41 +70,46 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
   Future<void> _navigateAfterDelay() async {
     await Future.delayed(const Duration(milliseconds: 3000));
 
-    if (!mounted) return;
+    if (!mounted || _hasNavigated) return;
 
     // Check if user has completed onboarding
     final hasCompletedOnboarding =
         await OnboardingService.hasCompletedOnboarding();
 
-    if (!mounted) return;
+    if (!mounted || _hasNavigated) return;
 
     if (hasCompletedOnboarding) {
       // Check authentication status
       final authState = ref.read(authStateProvider);
       authState.when(
         data: (user) {
-          if (mounted) {
+          if (mounted && !_hasNavigated) {
+            _hasNavigated = true;
             if (user != null) {
-              context.go('/dashboard');
+              // User is authenticated, go to role loading screen
+              context.go('/loading-role');
             } else {
               context.go('/auth');
             }
           }
         },
         loading: () {
-          if (mounted) {
+          if (mounted && !_hasNavigated) {
+            _hasNavigated = true;
             context.go('/auth');
           }
         },
         error: (_, __) {
-          if (mounted) {
+          if (mounted && !_hasNavigated) {
+            _hasNavigated = true;
             context.go('/auth');
           }
         },
       );
     } else {
       // Show onboarding for first-time users
-      if (mounted) {
+      if (mounted && !_hasNavigated) {
+        _hasNavigated = true;
         context.go('/onboarding');
       }
     }
@@ -227,7 +234,7 @@ class _SplashScreenState extends ConsumerState<SplashScreen>
                           ),
                           const SizedBox(height: 16),
                           Text(
-                            'Initializing...',
+                            _loadingMessage,
                             style: GoogleFonts.poppins(
                               fontSize: 14,
                               color: Colors.white.withValues(alpha: 0.7),
