@@ -11,6 +11,7 @@
 .svn/
 .swiftpm/
 migrate_working_dir/
+assets/emergency-response-app-dit-firebase-adminsdk-fbsvc-f1e8212865.json
 
 # IntelliJ related
 .qodo/
