@@ -10,7 +10,7 @@
 .history
 .svn/
 .swiftpm/
-migrate_working_dir/
+migrate_working_dir/git
 # Firebase & Google Cloud sensitive files
 **/firebase-adminsdk-*.json
 **/google-services.json
