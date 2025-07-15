@@ -44,6 +44,10 @@ export const LoginForm: React.FC = () => {
           speed={0.3}
           connections={true}
           connectionDistance={140}
+          showWaves={true}
+          waveCount={6}
+          waveAmplitude={80}
+          waveSpeed={0.012}
           colors={[
             "#3B82F6",
             "#6366F1",
