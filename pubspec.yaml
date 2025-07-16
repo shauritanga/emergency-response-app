@@ -27,6 +27,7 @@ dependencies:
   app_links: ^6.4.0
   flutter_background_geolocation: ^4.16.9
   url_launcher: ^6.3.1
+  share_plus: ^10.1.2
   cached_network_image: ^3.4.1
   path_provider: ^2.1.5
   flutter_cache_manager: ^3.4.1

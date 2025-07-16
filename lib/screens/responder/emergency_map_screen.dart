@@ -184,7 +184,7 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
                     mapController: mapController,
                     options: MapOptions(
                       initialCenter: emergencyLocation,
-                      initialZoom: 14.0,
+                      initialZoom: 13.0,
                       onMapReady: () {
                         setState(() {
                           _mapReady = true;

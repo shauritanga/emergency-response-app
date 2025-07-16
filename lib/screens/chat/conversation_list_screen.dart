@@ -61,19 +61,6 @@ class ConversationListScreen extends ConsumerWidget {
             ),
           ],
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(HugeIcons.strokeRoundedUserAdd01),
-            onPressed: () => _showNewChatDialog(context, ref, user.uid),
-            tooltip: 'New Chat',
-          ),
-          IconButton(
-            icon: const Icon(HugeIcons.strokeRoundedSettings01),
-            onPressed: () {
-              // Navigate to settings
-            },
-          ),
-        ],
         elevation: 0,
         backgroundColor: Theme.of(context).primaryColor,
         foregroundColor: Colors.white,
@@ -385,7 +372,10 @@ class ConversationListScreen extends ConsumerWidget {
               const SizedBox(height: 16),
               Text(
                 'Enter the ID of the person you want to message.',
-                style: GoogleFonts.poppins(fontSize: 12, color: Colors.grey.shade600),
+                style: GoogleFonts.poppins(
+                  fontSize: 12,
+                  color: Colors.grey.shade600,
+                ),
               ),
             ],
           ),
@@ -406,24 +396,39 @@ class ConversationListScreen extends ConsumerWidget {
                   // Create a new conversation
                   if (ref != null) {
                     try {
-                      final newConversationId = await ref.read(chatServiceProvider).createConversation(
-                        type: ConversationType.direct,
-                        participantIds: [userId, recipientId],
-                        participantNames: {'': ''}, // Placeholder, adjust based on actual data
-                        participantRoles: {'': ''}, // Placeholder, adjust based on actual data
-                        createdBy: userId,
-                      );
+                      final newConversationId = await ref
+                          .read(chatServiceProvider)
+                          .createConversation(
+                            type: ConversationType.direct,
+                            participantIds: [userId, recipientId],
+                            participantNames: {
+                              '': '',
+                            }, // Placeholder, adjust based on actual data
+                            participantRoles: {
+                              '': '',
+                            }, // Placeholder, adjust based on actual data
+                            createdBy: userId,
+                          );
                       Navigator.of(context).pop();
                       _openConversation(context, newConversationId);
                     } catch (e) {
-                      FeedbackUtils.showError(context, 'Failed to start chat: $e');
+                      FeedbackUtils.showError(
+                        context,
+                        'Failed to start chat: $e',
+                      );
                     }
                   } else {
                     Navigator.of(context).pop();
-                    FeedbackUtils.showError(context, 'Error: Unable to access chat service');
+                    FeedbackUtils.showError(
+                      context,
+                      'Error: Unable to access chat service',
+                    );
                   }
                 } else {
-                  FeedbackUtils.showError(context, 'Please enter a valid recipient ID');
+                  FeedbackUtils.showError(
+                    context,
+                    'Please enter a valid recipient ID',
+                  );
                 }
               },
               style: ElevatedButton.styleFrom(
