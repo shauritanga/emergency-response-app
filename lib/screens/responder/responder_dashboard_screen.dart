@@ -3,12 +3,14 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/emergency_provider.dart';
 import '../../models/emergency.dart';
 import 'responder_emergencies_screen.dart';
 import 'responder_profile_screen.dart';
 import 'responder_history_screen.dart';
+import 'responder_notifications_screen.dart';
 
 class ResponderDashboardScreen extends ConsumerWidget {
   const ResponderDashboardScreen({super.key});
@@ -105,12 +107,32 @@ class ResponderDashboardScreen extends ConsumerWidget {
               style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
             ),
             actions: [
-              IconButton(
-                icon: const Icon(Icons.notifications_outlined),
-                onPressed: () {
-                  // Show notifications
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Notifications coming soon')),
+              StreamBuilder<int>(
+                stream: _getUnreadNotificationCount(user.uid),
+                builder: (context, snapshot) {
+                  final unreadCount = snapshot.data ?? 0;
+                  return IconButton(
+                    icon: Badge(
+                      isLabelVisible: unreadCount > 0,
+                      label: Text(
+                        unreadCount > 99 ? '99+' : unreadCount.toString(),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 10,
+                        ),
+                      ),
+                      backgroundColor: Colors.red,
+                      child: const Icon(Icons.notifications_outlined),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder:
+                              (context) => const ResponderNotificationsScreen(),
+                        ),
+                      );
+                    },
                   );
                 },
               ),
@@ -789,5 +811,14 @@ class ResponderDashboardScreen extends ConsumerWidget {
         );
       },
     );
+  }
+
+  Stream<int> _getUnreadNotificationCount(String userId) {
+    return FirebaseFirestore.instance
+        .collection('notifications')
+        .where('userId', isEqualTo: userId)
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 }

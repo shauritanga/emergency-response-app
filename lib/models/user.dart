@@ -1,3 +1,5 @@
+import 'package:flutter/foundation.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -68,11 +70,10 @@ class UserModel {
       department: map['department'],
       deviceToken: map['deviceToken'],
       lastLocation: map['lastLocation'],
-      notificationPreferences:
-          map['notificationPreferences'] != null
-              ? Map<String, bool?>.from(map['notificationPreferences'])
-              : null,
-      isOnline: map['isOnline'] ?? false,
+      notificationPreferences: _parseNotificationPreferences(
+        map['notificationPreferences'],
+      ),
+      isOnline: _parseBooleanField(map['isOnline']) ?? false,
       lastSeen: map['lastSeen']?.toDate(),
       createdAt: map['createdAt']?.toDate(),
       updatedAt: map['updatedAt']?.toDate(),
@@ -81,5 +82,73 @@ class UserModel {
               ? List<String>.from(map['specializations'])
               : null,
     );
+  }
+
+  /// Safely parse notification preferences from Firebase data
+  static Map<String, bool?>? _parseNotificationPreferences(dynamic data) {
+    if (data == null) return null;
+
+    try {
+      if (data is Map<String, dynamic>) {
+        final Map<String, bool?> preferences = {};
+
+        data.forEach((key, value) {
+          // Handle different data types that might be stored in Firebase
+          if (value is bool) {
+            preferences[key] = value;
+          } else if (value is List) {
+            // If it's a list, we'll ignore it or convert based on context
+            // This handles the case where lists were accidentally stored
+            preferences[key] = null;
+          } else if (value is String) {
+            // Handle string representations of booleans
+            if (value.toLowerCase() == 'true') {
+              preferences[key] = true;
+            } else if (value.toLowerCase() == 'false') {
+              preferences[key] = false;
+            } else {
+              preferences[key] = null;
+            }
+          } else {
+            // For any other type, default to null
+            preferences[key] = null;
+          }
+        });
+
+        return preferences;
+      }
+
+      // If data is not a Map, return null
+      return null;
+    } catch (e) {
+      // If parsing fails, return null and log the error
+      debugPrint('Error parsing notification preferences: $e');
+      return null;
+    }
+  }
+
+  /// Safely parse boolean fields from Firebase data
+  static bool? _parseBooleanField(dynamic value) {
+    if (value == null) return null;
+
+    if (value is bool) {
+      return value;
+    } else if (value is String) {
+      if (value.toLowerCase() == 'true') {
+        return true;
+      } else if (value.toLowerCase() == 'false') {
+        return false;
+      }
+    } else if (value is List) {
+      // If it's a list, we can't convert it to boolean
+      debugPrint('Warning: Expected boolean but got List: $value');
+      return null;
+    }
+
+    // For any other type, return null
+    debugPrint(
+      'Warning: Could not parse boolean from: $value (${value.runtimeType})',
+    );
+    return null;
   }
 }

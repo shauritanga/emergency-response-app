@@ -18,16 +18,18 @@ class EmergencyMapScreen extends ConsumerStatefulWidget {
 }
 
 class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
-  MapController? mapController;
+  late final MapController mapController;
   LatLng? _userLocation;
   List<LatLng> _routePoints = [];
   FlutterMapRouteResult? _routeResult;
   bool _isLoading = true;
   bool _showSatellite = false;
+  bool _mapReady = false;
 
   @override
   void initState() {
     super.initState();
+    mapController = MapController();
     _initializeLocationAndRoute();
   }
 
@@ -98,7 +100,7 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
       }
 
       // Adjust map bounds to show both user and emergency locations
-      if (mapController != null && _userLocation != null) {
+      if (_userLocation != null) {
         _fitBounds();
       }
     } catch (e) {
@@ -117,34 +119,27 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
   }
 
   void _fitBounds() {
-    if (mapController == null || _userLocation == null) return;
+    if (_userLocation == null || !_mapReady) return;
 
-    final emergencyLocation = LatLng(
-      widget.emergency.latitude,
-      widget.emergency.longitude,
-    );
+    try {
+      final emergencyLocation = LatLng(
+        widget.emergency.latitude,
+        widget.emergency.longitude,
+      );
 
-    final bounds = FlutterMapBounds.fromPointList([
-      _userLocation!,
-      emergencyLocation,
-    ]);
+      final bounds = FlutterMapBounds.fromPointList([
+        _userLocation!,
+        emergencyLocation,
+      ]);
 
-    mapController!.fitCamera(
-      CameraFit.bounds(
-        bounds: bounds.toLatLngBounds(),
-        padding: const EdgeInsets.all(50.0),
-      ),
-    );
-  }
-
-  void _onMapCreated(MapController controller) {
-    setState(() {
-      mapController = controller;
-    });
-
-    // Fit bounds after map is created
-    if (!_isLoading && _userLocation != null) {
-      _fitBounds();
+      mapController.fitCamera(
+        CameraFit.bounds(
+          bounds: bounds.toLatLngBounds(),
+          padding: const EdgeInsets.all(50.0),
+        ),
+      );
+    } catch (e) {
+      debugPrint('Error fitting map bounds: $e');
     }
   }
 
@@ -191,20 +186,24 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
                       initialCenter: emergencyLocation,
                       initialZoom: 14.0,
                       onMapReady: () {
-                        final controller = MapController();
-                        _onMapCreated(controller);
+                        setState(() {
+                          _mapReady = true;
+                        });
+                        // Fit bounds after map is ready
+                        if (!_isLoading && _userLocation != null) {
+                          WidgetsBinding.instance.addPostFrameCallback((_) {
+                            _fitBounds();
+                          });
+                        }
                       },
                     ),
                     children: [
-                      // Base Tile Layer
-                      TileLayer(
-                        urlTemplate:
+                      // Base Tile Layer with proper configuration
+                      FlutterMapConfig.createTileLayer(
+                        style:
                             _showSatellite
-                                ? FlutterMapConfig.getTileUrl(
-                                  FlutterMapConfig.styleSatellite,
-                                )
-                                : FlutterMapConfig.openStreetMapUrl,
-                        userAgentPackageName: 'com.example.app',
+                                ? FlutterMapConfig.styleSatellite
+                                : FlutterMapConfig.styleStreet,
                       ),
 
                       // Emergency Area Circle
@@ -265,15 +264,14 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
                                     color: Colors.red,
                                     borderRadius: BorderRadius.circular(4),
                                   ),
-                                  child: Flexible(
-                                    child: const Text(
-                                      'Emergency',
-                                      style: TextStyle(
-                                        color: Colors.white,
-                                        fontSize: 10,
-                                        fontWeight: FontWeight.w400,
-                                      ),
+                                  child: const Text(
+                                    'Emergency',
+                                    style: TextStyle(
+                                      color: Colors.white,
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.w400,
                                     ),
+                                    overflow: TextOverflow.ellipsis,
                                   ),
                                 ),
                               ],

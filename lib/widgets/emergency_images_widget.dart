@@ -109,7 +109,11 @@ class EmergencyImagesWidget extends StatelessWidget {
     );
   }
 
-  void _showImageDialog(BuildContext context, List<String> imageUrls, int initialIndex) {
+  void _showImageDialog(
+    BuildContext context,
+    List<String> imageUrls,
+    int initialIndex,
+  ) {
     showDialog(
       context: context,
       builder: (BuildContext context) {
@@ -163,11 +167,9 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
         // Background tap to close
         GestureDetector(
           onTap: () => Navigator.of(context).pop(),
-          child: Container(
-            color: Colors.black.withValues(alpha: 0.8),
-          ),
+          child: Container(color: Colors.black.withValues(alpha: 0.8)),
         ),
-        
+
         // Image viewer
         Center(
           child: Container(
@@ -177,7 +179,10 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
               children: [
                 // Image counter
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
                     color: Colors.black.withValues(alpha: 0.7),
                     borderRadius: BorderRadius.circular(20),
@@ -192,9 +197,9 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                
+
                 // Image viewer
-                Flexible(
+                Expanded(
                   child: PageView.builder(
                     controller: _pageController,
                     onPageChanged: (index) {
@@ -250,7 +255,7 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
             ),
           ),
         ),
-        
+
         // Close button
         Positioned(
           top: 40,
@@ -263,11 +268,7 @@ class _ImageGalleryDialogState extends State<ImageGalleryDialog> {
                 color: Colors.black.withValues(alpha: 0.7),
                 shape: BoxShape.circle,
               ),
-              child: const Icon(
-                Icons.close,
-                color: Colors.white,
-                size: 24,
-              ),
+              child: const Icon(Icons.close, color: Colors.white, size: 24),
             ),
           ),
         ),

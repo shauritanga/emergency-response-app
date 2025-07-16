@@ -198,7 +198,9 @@ class _ResponderProfileScreenState
                     gradient: LinearGradient(
                       colors: [
                         _getDepartmentColor(data!.department),
-                        _getDepartmentColor(data.department).withOpacity(0.7),
+                        _getDepartmentColor(
+                          data.department,
+                        ).withValues(alpha: 0.7),
                       ],
                       begin: Alignment.topLeft,
                       end: Alignment.bottomRight,
@@ -208,7 +210,7 @@ class _ResponderProfileScreenState
                       BoxShadow(
                         color: _getDepartmentColor(
                           data.department,
-                        ).withOpacity(0.3),
+                        ).withValues(alpha: 0.3),
                         blurRadius: 10,
                         offset: const Offset(0, 4),
                       ),
@@ -217,100 +219,114 @@ class _ResponderProfileScreenState
                   child: Column(
                     children: [
                       Row(
-                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              GestureDetector(
-                                onTap: _updateProfilePicture,
-                                child: Stack(
-                                  children: [
-                                    CircleAvatar(
-                                      radius: 40,
-                                      backgroundColor: Colors.white,
-                                      child: CircleAvatar(
-                                        radius: 38,
-                                        backgroundImage:
-                                            data.photoURL != null &&
-                                                    data.photoURL!.isNotEmpty
-                                                ? CachedNetworkImageProvider(
-                                                  data.photoURL!,
-                                                )
-                                                : null,
-                                        child:
-                                            data.photoURL == null ||
-                                                    data.photoURL!.isEmpty
-                                                ? const Icon(
-                                                  Icons.person,
-                                                  size: 40,
-                                                  color: Colors.grey,
-                                                )
-                                                : null,
-                                      ),
-                                    ),
-                                    Positioned(
-                                      right: 0,
-                                      bottom: 0,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.deepPurple,
-                                          shape: BoxShape.circle,
-                                          boxShadow: [
-                                            BoxShadow(
-                                              color: Colors.black.withValues(
-                                                alpha: 0.2,
-                                              ),
-                                              blurRadius: 4,
-                                              offset: const Offset(0, 2),
-                                            ),
-                                          ],
-                                        ),
-                                        child: const Icon(
-                                          Icons.camera_alt,
-                                          color: Colors.white,
-                                          size: 16,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              const SizedBox(width: 16),
-                              Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    data.name,
-                                    style: GoogleFonts.poppins(
-                                      fontSize: 20,
-                                      color: Colors.white,
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-
-                                  const SizedBox(height: 4),
-                                  Row(
+                          Expanded(
+                            child: Row(
+                              children: [
+                                GestureDetector(
+                                  onTap: _updateProfilePicture,
+                                  child: Stack(
                                     children: [
-                                      Icon(
-                                        Icons.phone_outlined,
-                                        size: 16,
-                                        color: Colors.white.withOpacity(0.9),
+                                      CircleAvatar(
+                                        radius: 40,
+                                        backgroundColor: Colors.white,
+                                        child: CircleAvatar(
+                                          radius: 38,
+                                          backgroundImage:
+                                              data.photoURL != null &&
+                                                      data.photoURL!.isNotEmpty
+                                                  ? CachedNetworkImageProvider(
+                                                    data.photoURL!,
+                                                  )
+                                                  : null,
+                                          child:
+                                              data.photoURL == null ||
+                                                      data.photoURL!.isEmpty
+                                                  ? const Icon(
+                                                    Icons.person,
+                                                    size: 40,
+                                                    color: Colors.grey,
+                                                  )
+                                                  : null,
+                                        ),
                                       ),
-                                      const SizedBox(width: 4),
-                                      Text(
-                                        data.phone ?? 'Not provided',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: Colors.white.withOpacity(0.9),
+                                      Positioned(
+                                        right: 0,
+                                        bottom: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.deepPurple,
+                                            shape: BoxShape.circle,
+                                            boxShadow: [
+                                              BoxShadow(
+                                                color: Colors.black.withValues(
+                                                  alpha: 0.2,
+                                                ),
+                                                blurRadius: 4,
+                                                offset: const Offset(0, 2),
+                                              ),
+                                            ],
+                                          ),
+                                          child: const Icon(
+                                            Icons.camera_alt,
+                                            color: Colors.white,
+                                            size: 16,
+                                          ),
                                         ),
                                       ),
                                     ],
                                   ),
-                                ],
-                              ),
-                            ],
+                                ),
+                                const SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        data.name,
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 20,
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        overflow: TextOverflow.ellipsis,
+                                        maxLines: 1,
+                                      ),
+
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          Icon(
+                                            Icons.phone_outlined,
+                                            size: 16,
+                                            color: Colors.white.withValues(
+                                              alpha: 0.9,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 4),
+                                          Expanded(
+                                            child: Text(
+                                              data.phone ?? 'Not provided',
+                                              style: GoogleFonts.poppins(
+                                                fontSize: 14,
+                                                color: Colors.white.withValues(
+                                                  alpha: 0.9,
+                                                ),
+                                              ),
+                                              overflow: TextOverflow.ellipsis,
+                                              maxLines: 1,
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                           IconButton(
                             onPressed: () => _toggleEditMode(data),
