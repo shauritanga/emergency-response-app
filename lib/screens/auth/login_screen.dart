@@ -8,6 +8,7 @@ import '../../utils/validation_utils.dart';
 import '../../utils/feedback_utils.dart';
 import '../../utils/auth_error_handler.dart';
 import 'register_screen.dart';
+import 'forgot_password_screen.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -226,7 +227,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                                 alignment: Alignment.centerRight,
                                 child: TextButton(
                                   onPressed: () {
-                                    // Implement forgot password
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder:
+                                            (context) =>
+                                                const ForgotPasswordScreen(),
+                                      ),
+                                    );
                                   },
                                   style: TextButton.styleFrom(
                                     foregroundColor: const Color(0xFF2979FF),

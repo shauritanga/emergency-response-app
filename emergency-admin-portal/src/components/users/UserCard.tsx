@@ -15,6 +15,7 @@ import {
   Edit,
   MoreVertical,
   Activity,
+  Trash2,
 } from "lucide-react";
 import { formatDistanceToNow } from "date-fns";
 
@@ -23,6 +24,8 @@ interface UserCardProps {
   onEdit?: (user: any) => void;
   onToggleStatus?: (user: any) => void;
   onViewDetails?: (user: any) => void;
+  onDelete?: (user: any) => void;
+  canDelete?: boolean;
 }
 
 export const UserCard: React.FC<UserCardProps> = ({
@@ -30,6 +33,8 @@ export const UserCard: React.FC<UserCardProps> = ({
   onEdit,
   onToggleStatus,
   onViewDetails,
+  onDelete,
+  canDelete = true,
 }) => {
   const getRoleColor = (role: string) => {
     switch (role?.toLowerCase()) {
@@ -202,6 +207,16 @@ export const UserCard: React.FC<UserCardProps> = ({
               <UserCheck className="h-4 w-4" />
             )}
           </Button>
+          {canDelete && (
+            <Button
+              variant="destructive"
+              size="sm"
+              onClick={() => onDelete?.(user)}
+              className="cursor-pointer"
+            >
+              <Trash2 className="h-4 w-4" />
+            </Button>
+          )}
         </div>
       </CardContent>
     </Card>

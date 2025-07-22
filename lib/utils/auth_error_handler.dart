@@ -55,6 +55,16 @@ class AuthErrorHandler {
         case 'timeout':
           return 'Request timed out. Please try again.';
 
+        // Password reset errors
+        case 'auth/user-not-found':
+          return 'No account found with this email address. Please check your email or create a new account.';
+        case 'auth/invalid-email':
+          return 'Please enter a valid email address.';
+        case 'auth/missing-email':
+          return 'Email address is required.';
+        case 'auth/too-many-requests':
+          return 'Too many password reset requests. Please wait a moment before trying again.';
+
         // General errors
         case 'internal-error':
           return 'An internal error occurred. Please try again later.';
@@ -71,15 +81,16 @@ class AuthErrorHandler {
     // Handle generic exceptions
     if (error is Exception) {
       final errorString = error.toString().toLowerCase();
-      
-      if (errorString.contains('network') || errorString.contains('connection')) {
+
+      if (errorString.contains('network') ||
+          errorString.contains('connection')) {
         return 'Network error. Please check your internet connection and try again.';
       }
-      
+
       if (errorString.contains('timeout')) {
         return 'Request timed out. Please try again.';
       }
-      
+
       if (errorString.contains('permission')) {
         return 'Permission denied. Please contact support.';
       }
@@ -95,7 +106,8 @@ class AuthErrorHandler {
       case AuthAction.signIn:
         return 'Welcome back! You have been signed in successfully.';
       case AuthAction.register:
-        final roleText = userRole != null ? ' as a ${userRole.toLowerCase()}' : '';
+        final roleText =
+            userRole != null ? ' as a ${userRole.toLowerCase()}' : '';
         return 'Account created successfully$roleText! Welcome to Emergency Response.';
       case AuthAction.signOut:
         return 'You have been signed out successfully.';
@@ -107,50 +119,42 @@ class AuthErrorHandler {
   /// Checks if an error is network-related
   static bool isNetworkError(dynamic error) {
     if (error is SocketException) return true;
-    
+
     if (error is FirebaseAuthException) {
-      return error.code == 'network-request-failed' || 
-             error.code == 'timeout';
+      return error.code == 'network-request-failed' || error.code == 'timeout';
     }
-    
+
     if (error is FirebaseException) {
-      return error.code == 'unavailable' || 
-             error.code == 'deadline-exceeded';
+      return error.code == 'unavailable' || error.code == 'deadline-exceeded';
     }
-    
+
     if (error is Exception) {
       final errorString = error.toString().toLowerCase();
-      return errorString.contains('network') || 
-             errorString.contains('connection') ||
-             errorString.contains('timeout');
+      return errorString.contains('network') ||
+          errorString.contains('connection') ||
+          errorString.contains('timeout');
     }
-    
+
     return false;
   }
 
   /// Checks if an error is retryable
   static bool isRetryableError(dynamic error) {
     if (isNetworkError(error)) return true;
-    
+
     if (error is FirebaseAuthException) {
       return error.code == 'too-many-requests' ||
-             error.code == 'internal-error' ||
-             error.code == 'timeout';
+          error.code == 'internal-error' ||
+          error.code == 'timeout';
     }
-    
+
     if (error is FirebaseException) {
-      return error.code == 'unavailable' ||
-             error.code == 'deadline-exceeded';
+      return error.code == 'unavailable' || error.code == 'deadline-exceeded';
     }
-    
+
     return false;
   }
 }
 
 /// Enum for different authentication actions
-enum AuthAction {
-  signIn,
-  register,
-  signOut,
-  passwordReset,
-}
+enum AuthAction { signIn, register, signOut, passwordReset }

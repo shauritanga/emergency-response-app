@@ -7,13 +7,13 @@ import { UserStats } from "@/components/users/UserStats";
 import { UserEditModal } from "@/components/users/UserEditModal";
 import { UserCreateModal } from "@/components/users/UserCreateModal";
 import { UserDetailsModal } from "@/components/users/UserDetailsModal";
-import { useUsersRealtime } from "@/hooks/useUsers";
+import { ConfirmationModal } from "@/components/ui/confirmation-modal";
+import { FeedbackModal } from "@/components/ui/feedback-modal";
+import { useUsersRealtime, useDeleteUser, useUpdateUserStatus } from "@/hooks/useUsers";
 import { UserRole, UserStatus, type User } from "@/types";
 import {
   Users,
   Plus,
-  Download,
-  RefreshCw,
   Activity,
   Search,
   Grid,
@@ -32,7 +32,21 @@ export const UserManagement: React.FC = () => {
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
+  const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState<User | null>(null);
+
+  // Feedback modal state
+  const [feedbackModal, setFeedbackModal] = useState<{
+    isOpen: boolean;
+    type: "success" | "error";
+    title: string;
+    description: string;
+  }>({
+    isOpen: false,
+    type: "success",
+    title: "",
+    description: "",
+  });
 
   // Create stable filters object to prevent infinite re-renders
   const filters = React.useMemo(
@@ -44,6 +58,10 @@ export const UserManagement: React.FC = () => {
   );
 
   const { users, loading } = useUsersRealtime(filters);
+
+  // Mutations
+  const deleteUserMutation = useDeleteUser();
+  const updateUserStatusMutation = useUpdateUserStatus();
 
   // Filter users based on search query
   const filteredUsers = users.filter(
@@ -71,6 +89,68 @@ export const UserManagement: React.FC = () => {
 
   const handleAddUser = () => {
     setIsCreateModalOpen(true);
+  };
+
+  const handleDeleteUser = (user: User) => {
+    // Safety check: prevent deleting admin users if they're the only admin
+    if (user.role === UserRole.ADMIN) {
+      const adminCount = users.filter(u => u.role === UserRole.ADMIN).length;
+      if (adminCount <= 1) {
+        setFeedbackModal({
+          isOpen: true,
+          type: "error",
+          title: "Cannot Delete Admin User",
+          description: "You cannot delete the last admin user. Please create another admin user first to maintain system access.",
+        });
+        return;
+      }
+    }
+
+    setSelectedUser(user);
+    setIsDeleteModalOpen(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    if (!selectedUser) return;
+
+    try {
+      await deleteUserMutation.mutateAsync(selectedUser.id);
+      setIsDeleteModalOpen(false);
+
+      // Show success feedback
+      setFeedbackModal({
+        isOpen: true,
+        type: "success",
+        title: "User Deleted Successfully",
+        description: `${selectedUser.name} has been permanently removed from the system.`,
+      });
+
+      setSelectedUser(null);
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+
+      // Show error feedback
+      setFeedbackModal({
+        isOpen: true,
+        type: "error",
+        title: "Failed to Delete User",
+        description: error instanceof Error ? error.message : "An unexpected error occurred while deleting the user. Please try again.",
+      });
+    }
+  };
+
+  const handleToggleUserStatusAction = async (user: User) => {
+    const newStatus = user.status === UserStatus.ACTIVE ? UserStatus.INACTIVE : UserStatus.ACTIVE;
+
+    try {
+      await updateUserStatusMutation.mutateAsync({
+        id: user.id,
+        status: newStatus,
+      });
+    } catch (error) {
+      console.error("Failed to update user status:", error);
+      // Error handling is done by the mutation
+    }
   };
 
   return (
@@ -120,14 +200,7 @@ export const UserManagement: React.FC = () => {
                   <List className="h-4 w-4" />
                 </button>
               </div>
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
+
               <Button
                 size="sm"
                 onClick={handleAddUser}
@@ -236,15 +309,22 @@ export const UserManagement: React.FC = () => {
                   : "space-y-4"
               }
             >
-              {filteredUsers.map((user) => (
-                <UserCard
-                  key={user.id}
-                  user={user}
-                  onEdit={handleEditUser}
-                  onToggleStatus={handleToggleUserStatus}
-                  onViewDetails={handleViewUserDetails}
-                />
-              ))}
+              {filteredUsers.map((user) => {
+                const adminCount = users.filter(u => u.role === UserRole.ADMIN).length;
+                const canDelete = !(user.role === UserRole.ADMIN && adminCount <= 1);
+
+                return (
+                  <UserCard
+                    key={user.id}
+                    user={user}
+                    onEdit={handleEditUser}
+                    onToggleStatus={handleToggleUserStatusAction}
+                    onViewDetails={handleViewUserDetails}
+                    onDelete={handleDeleteUser}
+                    canDelete={canDelete}
+                  />
+                );
+              })}
             </div>
           )}
         </div>
@@ -277,6 +357,35 @@ export const UserManagement: React.FC = () => {
           setSelectedUser(user);
           setIsEditModalOpen(true);
         }}
+      />
+
+      <ConfirmationModal
+        isOpen={isDeleteModalOpen}
+        onClose={() => {
+          setIsDeleteModalOpen(false);
+          setSelectedUser(null);
+        }}
+        onConfirm={handleConfirmDelete}
+        title="Delete User"
+        description={
+          selectedUser
+            ? `Are you sure you want to delete "${selectedUser.name}"? This action cannot be undone and will permanently remove the user from the system.`
+            : "Are you sure you want to delete this user?"
+        }
+        confirmText="Delete User"
+        cancelText="Cancel"
+        variant="danger"
+        isLoading={deleteUserMutation.isPending}
+      />
+
+      <FeedbackModal
+        isOpen={feedbackModal.isOpen}
+        onClose={() => setFeedbackModal(prev => ({ ...prev, isOpen: false }))}
+        type={feedbackModal.type}
+        title={feedbackModal.title}
+        description={feedbackModal.description}
+        autoClose={feedbackModal.type === "success"}
+        autoCloseDelay={3000}
       />
     </div>
   );

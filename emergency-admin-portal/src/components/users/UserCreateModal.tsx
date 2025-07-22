@@ -160,9 +160,9 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleClose}>
-        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-white border-border">
+        <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto bg-background dark:bg-gray-900 border-border shadow-2xl">
           <DialogHeader>
-            <DialogTitle className="flex items-center gap-3 text-card-foreground">
+            <DialogTitle className="flex items-center gap-3 text-foreground">
               <div className="p-2 bg-green-100 dark:bg-green-900/30 rounded-lg">
                 <UserPlus className="h-5 w-5 text-green-600 dark:text-green-400" />
               </div>
@@ -170,7 +170,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
             </DialogTitle>
           </DialogHeader>
 
-          <div className="bg-card border border-border rounded-lg p-6">
+          <div className="bg-background dark:bg-gray-800/50 border border-border rounded-lg p-6">
             <form onSubmit={handleSubmit} className="space-y-6">
               {errors.submit && (
                 <div className="p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg">
@@ -182,13 +182,13 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
 
               {/* Basic Information */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-card-foreground">
+                <h3 className="text-lg font-semibold text-foreground">
                   Basic Information
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="name" className="text-card-foreground">
+                    <Label htmlFor="name" className="text-foreground">
                       Full Name *
                     </Label>
                     <div className="relative">
@@ -215,7 +215,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="email" className="text-card-foreground">
+                    <Label htmlFor="email" className="text-foreground">
                       Email Address *
                     </Label>
                     <div className="relative">
@@ -243,7 +243,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="phone" className="text-card-foreground">
+                    <Label htmlFor="phone" className="text-foreground">
                       Phone Number *
                     </Label>
                     <div className="relative">
@@ -272,7 +272,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                   <div className="space-y-2">
                     <Label
                       htmlFor="department"
-                      className="text-card-foreground"
+                      className="text-foreground"
                     >
                       Department
                     </Label>
@@ -306,13 +306,13 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
 
               {/* Role and Status */}
               <div className="space-y-4">
-                <h3 className="text-lg font-semibold text-card-foreground">
+                <h3 className="text-lg font-semibold text-foreground">
                   Role & Status
                 </h3>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                   <div className="space-y-2">
-                    <Label htmlFor="role" className="text-card-foreground">
+                    <Label htmlFor="role" className="text-foreground">
                       User Role *
                     </Label>
                     <Select
@@ -348,7 +348,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="status" className="text-card-foreground">
+                    <Label htmlFor="status" className="text-foreground">
                       Initial Status
                     </Label>
                     <Select
@@ -445,7 +445,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                       <div className="space-y-2">
                         <Label
                           htmlFor="password"
-                          className="text-card-foreground"
+                          className="text-foreground"
                         >
                           Password *
                         </Label>
@@ -476,7 +476,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                       <div className="space-y-2">
                         <Label
                           htmlFor="confirmPassword"
-                          className="text-card-foreground"
+                          className="text-foreground"
                         >
                           Confirm Password *
                         </Label>
@@ -508,13 +508,13 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                 </div>
               </div>
 
-              <DialogFooter className="pt-6">
+              <DialogFooter className="pt-6 gap-3">
                 <Button
                   type="button"
                   variant="outline"
                   onClick={handleClose}
                   disabled={isExecuting}
-                  className="bg-background border-input hover:bg-accent"
+                  className="bg-background dark:bg-gray-800 border-input dark:border-gray-600 hover:bg-accent dark:hover:bg-gray-700 text-foreground"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Cancel
@@ -522,7 +522,7 @@ export const UserCreateModal: React.FC<UserCreateModalProps> = ({
                 <Button
                   type="submit"
                   disabled={isExecuting}
-                  className="bg-primary text-primary-foreground hover:bg-primary/90"
+                  className="bg-primary dark:bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 text-primary-foreground disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Save className="h-4 w-4 mr-2" />
                   {isExecuting ? "Creating..." : "Create User"}

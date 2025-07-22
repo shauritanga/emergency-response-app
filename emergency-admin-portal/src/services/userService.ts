@@ -16,6 +16,7 @@ import {
   createUserWithEmailAndPassword,
   sendPasswordResetEmail,
   updateProfile,
+  deleteUser as deleteAuthUser,
 } from "firebase/auth";
 import { db, auth } from "@/lib/firebase";
 import {
@@ -314,14 +315,81 @@ export class UserService {
     return password;
   }
 
-  // Delete user
+  // Check if user can be safely deleted
+  async canDeleteUser(id: string): Promise<{ canDelete: boolean; reason?: string }> {
+    try {
+      const user = await this.getUserById(id);
+      if (!user) {
+        return { canDelete: false, reason: "User not found" };
+      }
+
+      // Check if this is the last admin user
+      if (user.role === UserRole.ADMIN) {
+        const allUsers = await this.getUsers();
+        const adminCount = allUsers.filter(u => u.role === UserRole.ADMIN).length;
+        if (adminCount <= 1) {
+          return {
+            canDelete: false,
+            reason: "Cannot delete the last admin user. Create another admin first."
+          };
+        }
+      }
+
+      return { canDelete: true };
+    } catch (error) {
+      console.error("Error checking if user can be deleted:", error);
+      return { canDelete: false, reason: "Error checking user deletion eligibility" };
+    }
+  }
+
+  // Delete user (Firestore document only - Firebase Auth deletion requires admin SDK)
   async deleteUser(id: string): Promise<void> {
     try {
+      console.log(`Attempting to delete user: ${id}`);
+
+      // Safety check before deletion
+      const deleteCheck = await this.canDeleteUser(id);
+      if (!deleteCheck.canDelete) {
+        throw new Error(deleteCheck.reason || "User cannot be deleted");
+      }
+
+      // Get user data before deletion for logging
+      const userDoc = await this.getUserById(id);
+      if (!userDoc) {
+        throw new Error("User not found");
+      }
+
+      // Delete the Firestore document
       const docRef = doc(db, this.collectionName, id);
       await deleteDoc(docRef);
+
+      console.log(`Successfully deleted user: ${userDoc.name} (${userDoc.email})`);
+
+      // Note: Firebase Auth user deletion requires Firebase Admin SDK
+      // which cannot be used in client-side applications for security reasons.
+      // In a production environment, you would typically:
+      // 1. Call a Cloud Function that uses Admin SDK to delete the auth user
+      // 2. Or mark the user as deleted and handle cleanup server-side
+
     } catch (error) {
       console.error("Error deleting user:", error);
-      throw new Error("Failed to delete user");
+
+      // Provide more specific error messages
+      if (error instanceof Error) {
+        if (error.message.includes("permission-denied")) {
+          throw new Error("Permission denied. You don't have permission to delete this user.");
+        } else if (error.message.includes("not-found")) {
+          throw new Error("User not found. The user may have already been deleted.");
+        } else if (error.message.includes("network-request-failed")) {
+          throw new Error("Network error. Please check your connection and try again.");
+        }
+      }
+
+      throw new Error(
+        `Failed to delete user: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 

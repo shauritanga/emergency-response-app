@@ -118,14 +118,14 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={showCloseButton ? onClose : undefined}>
-      <DialogContent className="max-w-md bg-card border-border">
+      <DialogContent className="max-w-md bg-background dark:bg-gray-900 border-border shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-card-foreground">
+          <DialogTitle className="flex items-center gap-3 text-foreground">
             <div className={`p-2 ${config.iconBg} rounded-lg`}>
-              <Icon 
+              <Icon
                 className={`h-5 w-5 ${config.iconColor} ${
                   type === "loading" ? "animate-spin" : ""
-                }`} 
+                }`}
               />
             </div>
             {title}
@@ -134,13 +134,13 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
 
         <div className={`${config.bgColor} border ${config.borderColor} rounded-lg p-6`}>
           <div className="space-y-4">
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-foreground/80 dark:text-gray-300 leading-relaxed">
               {description}
             </p>
-            
+
             {details && (
-              <div className="bg-muted/50 rounded-md p-3">
-                <p className="text-sm text-muted-foreground font-mono">
+              <div className="bg-muted/50 dark:bg-gray-800/50 rounded-md p-3">
+                <p className="text-sm text-foreground/70 dark:text-gray-400 font-mono">
                   {details}
                 </p>
               </div>
@@ -148,32 +148,32 @@ export const FeedbackModal: React.FC<FeedbackModalProps> = ({
           </div>
 
           {(primaryAction || secondaryAction || showCloseButton) && type !== "loading" && (
-            <DialogFooter className="pt-6">
+            <DialogFooter className="pt-6 gap-3">
               {secondaryAction && (
                 <Button
                   variant="outline"
                   onClick={secondaryAction.onClick}
-                  className="bg-background border-input hover:bg-accent"
+                  className="bg-background dark:bg-gray-800 border-input dark:border-gray-600 hover:bg-accent dark:hover:bg-gray-700 text-foreground"
                 >
                   {secondaryAction.label}
                 </Button>
               )}
-              
+
               {primaryAction && (
                 <Button
                   onClick={primaryAction.onClick}
                   variant={primaryAction.variant || "default"}
-                  className="cursor-pointer"
+                  className="cursor-pointer bg-primary dark:bg-primary hover:bg-primary/90 dark:hover:bg-primary/90 text-primary-foreground"
                 >
                   {primaryAction.label}
                 </Button>
               )}
-              
+
               {showCloseButton && !primaryAction && (
                 <Button
                   variant="outline"
                   onClick={onClose}
-                  className="bg-background border-input hover:bg-accent"
+                  className="bg-background dark:bg-gray-800 border-input dark:border-gray-600 hover:bg-accent dark:hover:bg-gray-700 text-foreground"
                 >
                   <X className="h-4 w-4 mr-2" />
                   Close

@@ -8,7 +8,7 @@ import { StatusUpdateModal } from "@/components/emergency/StatusUpdateModal";
 import { ResponderAssignmentModal } from "@/components/emergency/ResponderAssignmentModal";
 import { useEmergenciesRealtime } from "@/hooks/useEmergencies";
 import { type Emergency, EmergencyStatus } from "@/types";
-import { AlertTriangle, Filter, Download, RefreshCw } from "lucide-react";
+import { AlertTriangle } from "lucide-react";
 
 export const EmergencyManagement: React.FC = () => {
   // Get real-time emergency data
@@ -75,20 +75,7 @@ export const EmergencyManagement: React.FC = () => {
             Monitor and manage all emergency responses
           </p>
         </div>
-        <div className="flex items-center space-x-3">
-          <Button variant="outline" size="sm">
-            <Filter className="h-4 w-4 mr-2" />
-            Filter
-          </Button>
-          <Button variant="outline" size="sm">
-            <Download className="h-4 w-4 mr-2" />
-            Export
-          </Button>
-          <Button variant="outline" size="sm">
-            <RefreshCw className="h-4 w-4 mr-2" />
-            Refresh
-          </Button>
-        </div>
+
       </div>
 
       {/* Quick Stats */}

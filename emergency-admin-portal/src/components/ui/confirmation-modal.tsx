@@ -36,31 +36,39 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     switch (variant) {
       case "danger":
         return {
-          iconBg: "bg-red-100",
-          iconColor: "text-red-600",
+          iconBg: "bg-red-100 dark:bg-red-900/30",
+          iconColor: "text-red-600 dark:text-red-400",
           icon: Trash2,
-          confirmButtonClass: "bg-red-600 hover:bg-red-700 text-white",
+          confirmButtonClass: "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white",
+          borderColor: "border-red-200 dark:border-red-800",
+          bgColor: "bg-red-50/50 dark:bg-red-900/10",
         };
       case "warning":
         return {
-          iconBg: "bg-yellow-100",
-          iconColor: "text-yellow-600",
+          iconBg: "bg-yellow-100 dark:bg-yellow-900/30",
+          iconColor: "text-yellow-600 dark:text-yellow-400",
           icon: AlertTriangle,
-          confirmButtonClass: "bg-yellow-600 hover:bg-yellow-700 text-white",
+          confirmButtonClass: "bg-yellow-600 hover:bg-yellow-700 dark:bg-yellow-600 dark:hover:bg-yellow-700 text-white",
+          borderColor: "border-yellow-200 dark:border-yellow-800",
+          bgColor: "bg-yellow-50/50 dark:bg-yellow-900/10",
         };
       case "info":
         return {
-          iconBg: "bg-blue-100",
-          iconColor: "text-blue-600",
+          iconBg: "bg-blue-100 dark:bg-blue-900/30",
+          iconColor: "text-blue-600 dark:text-blue-400",
           icon: AlertTriangle,
-          confirmButtonClass: "bg-blue-600 hover:bg-blue-700 text-white",
+          confirmButtonClass: "bg-blue-600 hover:bg-blue-700 dark:bg-blue-600 dark:hover:bg-blue-700 text-white",
+          borderColor: "border-blue-200 dark:border-blue-800",
+          bgColor: "bg-blue-50/50 dark:bg-blue-900/10",
         };
       default:
         return {
-          iconBg: "bg-red-100",
-          iconColor: "text-red-600",
+          iconBg: "bg-red-100 dark:bg-red-900/30",
+          iconColor: "text-red-600 dark:text-red-400",
           icon: Trash2,
-          confirmButtonClass: "bg-red-600 hover:bg-red-700 text-white",
+          confirmButtonClass: "bg-red-600 hover:bg-red-700 dark:bg-red-600 dark:hover:bg-red-700 text-white",
+          borderColor: "border-red-200 dark:border-red-800",
+          bgColor: "bg-red-50/50 dark:bg-red-900/10",
         };
     }
   };
@@ -70,38 +78,29 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-md bg-card border-border">
+      <DialogContent className="max-w-md bg-background dark:bg-gray-900 border-border shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3 text-card-foreground">
-            <div
-              className={`p-2 ${styles.iconBg} dark:${styles.iconBg.replace(
-                "100",
-                "900/30"
-              )} rounded-lg`}
-            >
-              <Icon
-                className={`h-5 w-5 ${
-                  styles.iconColor
-                } dark:${styles.iconColor.replace("600", "400")}`}
-              />
+          <DialogTitle className="flex items-center gap-3 text-foreground">
+            <div className={`p-2 ${styles.iconBg} rounded-lg`}>
+              <Icon className={`h-5 w-5 ${styles.iconColor}`} />
             </div>
             {title}
           </DialogTitle>
         </DialogHeader>
 
-        <div className="bg-card border border-border rounded-lg p-6">
+        <div className={`${styles.bgColor} border ${styles.borderColor} rounded-lg p-6`}>
           <div className="py-4">
-            <p className="text-muted-foreground leading-relaxed">
+            <p className="text-foreground/80 dark:text-gray-300 leading-relaxed">
               {description}
             </p>
           </div>
 
-          <DialogFooter className="pt-6">
+          <DialogFooter className="pt-6 gap-3">
             <Button
               variant="outline"
               onClick={onClose}
               disabled={isLoading}
-              className="bg-background border-input hover:bg-accent"
+              className="bg-background dark:bg-gray-800 border-input dark:border-gray-600 hover:bg-accent dark:hover:bg-gray-700 text-foreground"
             >
               <X className="h-4 w-4 mr-2" />
               {cancelText}
@@ -109,7 +108,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
             <Button
               onClick={onConfirm}
               disabled={isLoading}
-              className={styles.confirmButtonClass}
+              className={`${styles.confirmButtonClass} disabled:opacity-50 disabled:cursor-not-allowed`}
             >
               <Icon className="h-4 w-4 mr-2" />
               {isLoading ? "Processing..." : confirmText}

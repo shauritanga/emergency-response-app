@@ -9,6 +9,10 @@ class AuthService {
   final FirebaseAuth _auth = FirebaseAuth.instance;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // Rate limiting for password reset emails
+  static final Map<String, DateTime> _lastPasswordResetRequest = {};
+  static const Duration _passwordResetCooldown = Duration(minutes: 1);
+
   Stream<User?> get authStateChanges => _auth.authStateChanges();
 
   Future<User?> signIn(String email, String password) async {
@@ -35,6 +39,81 @@ class AuthService {
 
   Future<void> signOut() async {
     await _auth.signOut();
+  }
+
+  Future<void> sendPasswordResetEmail(String email) async {
+    try {
+      // Check network connectivity before attempting password reset
+      final hasConnection = await NetworkUtils.hasInternetConnection();
+      if (!hasConnection) {
+        throw const NetworkException(
+          'No internet connection. Please check your network and try again.',
+        );
+      }
+
+      // Validate email format
+      if (email.trim().isEmpty) {
+        throw Exception('Email address is required.');
+      }
+
+      final emailRegex = RegExp(r'^[\w-\.]+@([\w-]+\.)+[\w-]{2,4}$');
+      if (!emailRegex.hasMatch(email.trim())) {
+        throw Exception('Please enter a valid email address.');
+      }
+
+      // Check rate limiting
+      final normalizedEmail = email.trim().toLowerCase();
+      final lastRequest = _lastPasswordResetRequest[normalizedEmail];
+      if (lastRequest != null) {
+        final timeSinceLastRequest = DateTime.now().difference(lastRequest);
+        if (timeSinceLastRequest < _passwordResetCooldown) {
+          final remainingTime = _passwordResetCooldown - timeSinceLastRequest;
+          final remainingSeconds = remainingTime.inSeconds;
+          throw Exception(
+            'Please wait $remainingSeconds seconds before requesting another password reset email.',
+          );
+        }
+      }
+
+      // Check if user exists in Firestore before sending reset email
+      // Note: For security reasons, we'll still send the reset email even if user doesn't exist
+      // but we'll log it for debugging purposes
+      try {
+        final userQuery =
+            await _firestore
+                .collection('users')
+                .where('email', isEqualTo: email.trim().toLowerCase())
+                .limit(1)
+                .get();
+
+        if (userQuery.docs.isEmpty) {
+          debugPrint(
+            'Warning: Password reset requested for non-existent user: $email',
+          );
+          // Continue with the reset process for security reasons (don't reveal if user exists)
+        } else {
+          debugPrint(
+            'User found in database, proceeding with password reset for: $email',
+          );
+        }
+      } catch (e) {
+        debugPrint('Error checking user existence: $e');
+        // Continue with the reset process even if the check fails
+      }
+
+      // Send password reset email using default Firebase settings
+      debugPrint('Attempting to send password reset email to: $email');
+      await _auth.sendPasswordResetEmail(email: email.trim());
+
+      // Record the timestamp for rate limiting
+      _lastPasswordResetRequest[normalizedEmail] = DateTime.now();
+
+      debugPrint('Password reset email sent successfully to: $email');
+    } catch (e) {
+      debugPrint('Password reset error: $e');
+      // Re-throw with user-friendly error message
+      throw Exception(AuthErrorHandler.getErrorMessage(e));
+    }
   }
 
   Future<User?> register(

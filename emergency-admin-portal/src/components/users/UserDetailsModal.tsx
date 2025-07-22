@@ -43,36 +43,36 @@ export const UserDetailsModal: React.FC<UserDetailsModalProps> = ({
   const getRoleColor = (role: UserRole) => {
     switch (role) {
       case UserRole.ADMIN:
-        return "bg-red-100 text-red-800 border-red-200";
+        return "bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-300 border-red-200 dark:border-red-800";
       case UserRole.RESPONDER:
-        return "bg-blue-100 text-blue-800 border-blue-200";
+        return "bg-blue-100 dark:bg-blue-900/30 text-blue-800 dark:text-blue-300 border-blue-200 dark:border-blue-800";
       case UserRole.CITIZEN:
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-800";
     }
   };
 
   const getStatusColor = (status: UserStatus) => {
     switch (status) {
       case UserStatus.ACTIVE:
-        return "bg-green-100 text-green-800 border-green-200";
+        return "bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-300 border-green-200 dark:border-green-800";
       case UserStatus.INACTIVE:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-800";
       case UserStatus.PENDING:
-        return "bg-yellow-100 text-yellow-800 border-yellow-200";
+        return "bg-yellow-100 dark:bg-yellow-900/30 text-yellow-800 dark:text-yellow-300 border-yellow-200 dark:border-yellow-800";
       default:
-        return "bg-gray-100 text-gray-800 border-gray-200";
+        return "bg-gray-100 dark:bg-gray-900/30 text-gray-800 dark:text-gray-300 border-gray-200 dark:border-gray-800";
     }
   };
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
-      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-white">
+      <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto bg-background dark:bg-gray-900 border-border shadow-2xl">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-3">
-            <div className="p-2 bg-blue-100 rounded-lg">
-              <UserIcon className="h-5 w-5 text-blue-600" />
+          <DialogTitle className="flex items-center gap-3 text-foreground">
+            <div className="p-2 bg-blue-100 dark:bg-blue-900/30 rounded-lg">
+              <UserIcon className="h-5 w-5 text-blue-600 dark:text-blue-400" />
             </div>
             User Details: {user.name}
           </DialogTitle>

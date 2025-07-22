@@ -16,9 +16,6 @@ import {
   CheckCircle,
   Activity,
   BarChart3,
-  RefreshCw,
-  Filter,
-  Download,
 } from "lucide-react";
 
 export const Dashboard: React.FC = () => {
@@ -74,20 +71,7 @@ export const Dashboard: React.FC = () => {
               </div>
             </div>
 
-            <div className="flex items-center gap-3">
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                <RefreshCw className="h-4 w-4 mr-2" />
-                Refresh
-              </Button>
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                <Download className="h-4 w-4 mr-2" />
-                Export
-              </Button>
-              <Button variant="outline" size="sm" className="cursor-pointer">
-                <Filter className="h-4 w-4 mr-2" />
-                Filter
-              </Button>
-            </div>
+
           </div>
         </div>
       </div>
