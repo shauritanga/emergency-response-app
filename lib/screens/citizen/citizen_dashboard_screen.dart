@@ -219,27 +219,21 @@ class CitizenDashboardScreen extends ConsumerWidget {
     final emergencyContacts = [
       {
         'name': 'Police',
-        'number': '911',
+        'number': '112',
         'icon': Icons.local_police,
         'color': Colors.blue,
       },
       {
         'name': 'Fire Dept',
-        'number': '911',
+        'number': '115',
         'icon': Icons.local_fire_department,
         'color': Colors.orange,
       },
       {
         'name': 'Medical',
-        'number': '911',
+        'number': '114',
         'icon': Icons.medical_services,
         'color': Colors.red,
-      },
-      {
-        'name': 'Tanesco',
-        'number': '1234567890',
-        'icon': Icons.warning,
-        'color': Colors.purple,
       },
     ];
 

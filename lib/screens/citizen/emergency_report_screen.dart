@@ -75,15 +75,30 @@ class _EmergencyReportScreenState extends ConsumerState<EmergencyReportScreen>
     });
 
     try {
-      final location =
-          await ref.read(locationServiceProvider).getCurrentLocation();
+      // Use high accuracy location for emergency reporting
+      debugPrint('🎯 Getting high accuracy location for emergency report...');
+      final location = await ref
+          .read(locationServiceProvider)
+          .getHighAccuracyLocation(
+            onStatusUpdate: (status) {
+              debugPrint('📍 Location status: $status');
+              // You could show this status to user if needed
+            },
+          );
+
       if (location == null) {
         setState(() {
-          _error = 'Could not get location';
+          _error =
+              'Could not get accurate location. Please ensure GPS is enabled and try again.';
           _isSubmitting = false;
         });
         return;
       }
+
+      debugPrint(
+        '✅ Got emergency location: ${location.latitude}, ${location.longitude} '
+        '(±${location.accuracy?.toStringAsFixed(1) ?? 'unknown'}m accuracy)',
+      );
 
       // Upload images to Supabase if any are selected
       final selectedImages = ref.read(selectedImagesProvider);

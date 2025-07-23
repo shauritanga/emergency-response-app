@@ -96,13 +96,26 @@ class _CitizenHomeScreenState extends ConsumerState<CitizenHomeScreen> {
       // Request location permissions
       await bg.BackgroundGeolocation.requestPermission();
 
-      // Configure background location with new Notification class
+      // Configure background location with enhanced accuracy settings
       await bg.BackgroundGeolocation.ready(
         bg.Config(
+          // Enhanced accuracy settings
           desiredAccuracy: bg.Config.DESIRED_ACCURACY_HIGH,
-          distanceFilter: 10.0, // Update when moving 10m
-          stationaryRadius: 25,
-          locationUpdateInterval: 300000, // 5 minutes in milliseconds
+          distanceFilter: 5.0, // Update when moving 5m (more sensitive)
+          stationaryRadius: 15, // Smaller radius for better accuracy
+          locationUpdateInterval: 60000, // 1 minute for more frequent updates
+          fastestLocationUpdateInterval:
+              30000, // Fastest update every 30 seconds
+          // GPS optimization
+          locationAuthorizationRequest: 'Always',
+          locationAuthorizationAlert: {
+            'titleWhenInUse': 'Emergency Response Location',
+            'titleWhenOff': 'Emergency Response requires location access',
+            'instructions':
+                'To ensure accurate emergency response, please enable location services.',
+            'cancelButton': 'Cancel',
+            'settingsButton': 'Settings',
+          },
           // Use new Notification class instead of deprecated notification* fields
           notification: bg.Notification(
             title: 'Emergency Response',

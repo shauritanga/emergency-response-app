@@ -246,16 +246,28 @@ class EmergencyService {
     return _emergencies
         .where('type', isEqualTo: department)
         .where('status', whereIn: ['Pending', 'In Progress'])
+        .orderBy('timestamp', descending: true) // Newest emergencies first
         .snapshots()
-        .map(
-          (snapshot) =>
+        .map((snapshot) {
+          final emergencies =
               snapshot.docs
                   .map(
                     (doc) =>
                         Emergency.fromMap(doc.data() as Map<String, dynamic>),
                   )
-                  .toList(),
-        );
+                  .toList();
+
+          // Additional sorting to ensure newest are at the top
+          // This provides a fallback in case Firestore ordering has issues
+          emergencies.sort((a, b) => b.timestamp.compareTo(a.timestamp));
+
+          debugPrint(
+            '📋 Loaded ${emergencies.length} active emergencies for $department department, '
+            'sorted by newest first',
+          );
+
+          return emergencies;
+        });
   }
 
   Stream<List<Emergency>> getResponderHistory(String userId) {

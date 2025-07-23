@@ -82,6 +82,21 @@ class AdminNotifier extends StateNotifier<AdminState> {
     }
   }
 
+  // Clear all data (for logout)
+  void clearData() {
+    state = AdminState(
+      users: const [],
+      emergencies: const [],
+      dashboardStats: const {},
+      emergencyTrends: const [],
+      systemSettings: const {},
+      isLoading: false,
+      error: null,
+      searchQuery: '',
+      selectedFilter: 'all',
+    );
+  }
+
   // User management
   Future<void> loadUsers() async {
     state = state.copyWith(isLoading: true, error: null);

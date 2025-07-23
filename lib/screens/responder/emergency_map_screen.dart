@@ -35,9 +35,19 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
 
   Future<void> _initializeLocationAndRoute() async {
     try {
-      // Get user's current location
-      final location =
-          await ref.read(locationServiceProvider).getCurrentLocation();
+      // Get user's current location with high accuracy for responder navigation
+      debugPrint(
+        '🎯 Getting high accuracy location for responder navigation...',
+      );
+      final location = await ref
+          .read(locationServiceProvider)
+          .getLocationWithAccuracy(
+            maxAccuracyMeters:
+                15.0, // Allow slightly less accuracy for faster response
+            maxAttempts: 2, // Fewer attempts for quicker loading
+            timeout: Duration(seconds: 15),
+          );
+
       if (location == null ||
           location.latitude == null ||
           location.longitude == null) {
@@ -48,7 +58,7 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(
               content: Text(
-                'Unable to get current location. Showing emergency location only.',
+                'Unable to get accurate location. Showing emergency location only.',
               ),
               backgroundColor: Colors.orange,
             ),
@@ -56,6 +66,11 @@ class _EmergencyMapScreenState extends ConsumerState<EmergencyMapScreen> {
         }
         return;
       }
+
+      debugPrint(
+        '✅ Got responder location: ${location.latitude}, ${location.longitude} '
+        '(±${location.accuracy?.toStringAsFixed(1) ?? 'unknown'}m accuracy)',
+      );
 
       setState(() {
         _userLocation = LatLng(location.latitude!, location.longitude!);

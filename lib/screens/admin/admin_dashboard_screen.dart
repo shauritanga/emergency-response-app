@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/admin_provider.dart';
+import '../../widgets/admin/admin_app_bar.dart';
 import '../../widgets/admin/stat_card.dart';
 import '../../widgets/admin/quick_action_card.dart';
 import '../../widgets/admin/emergency_trends_chart.dart';
@@ -47,16 +48,10 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'Admin Dashboard',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(adminProvider.notifier).loadAllData(),
-          ),
+      appBar: AdminAppBar(
+        title: 'Admin Dashboard',
+        onRefresh: () => ref.read(adminProvider.notifier).loadAllData(),
+        additionalActions: [
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed:
@@ -66,6 +61,7 @@ class _AdminDashboardScreenState extends ConsumerState<AdminDashboardScreen>
                     builder: (_) => const SystemSettingsScreen(),
                   ),
                 ),
+            tooltip: 'System Settings',
           ),
         ],
         bottom: TabBar(

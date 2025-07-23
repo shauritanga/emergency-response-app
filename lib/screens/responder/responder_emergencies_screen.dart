@@ -49,10 +49,33 @@ class ResponderEmergenciesScreen extends ConsumerWidget {
       appBar: AppBar(
         backgroundColor: Colors.deepPurple,
         foregroundColor: Colors.white,
-        title: Text(
-          'Active Emergencies',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+        title: emergenciesAsync.when(
+          data:
+              (emergencies) => Text(
+                'Active Emergencies (${emergencies.length})',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+          loading:
+              () => Text(
+                'Active Emergencies',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
+          error:
+              (_, __) => Text(
+                'Active Emergencies',
+                style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
+              ),
         ),
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.refresh),
+            onPressed: () {
+              // Refresh the emergencies list
+              ref.invalidate(responderEmergenciesProvider);
+            },
+            tooltip: 'Refresh emergencies',
+          ),
+        ],
         elevation: 0,
       ),
       body: Column(
@@ -70,11 +93,26 @@ class ResponderEmergenciesScreen extends ConsumerWidget {
                     itemCount: emergencies.length,
                     itemBuilder: (context, index) {
                       final emergency = emergencies[index];
+                      final isNew = _isNewEmergency(emergency.timestamp);
+                      final isUrgent = _isUrgentEmergency(emergency.timestamp);
+
                       return Card(
                         margin: const EdgeInsets.only(bottom: 16),
-                        elevation: 2,
+                        elevation: isUrgent ? 6 : (isNew ? 4 : 2),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(16),
+                          side:
+                              isUrgent
+                                  ? BorderSide(
+                                    color: Colors.red.shade300,
+                                    width: 2,
+                                  )
+                                  : isNew
+                                  ? BorderSide(
+                                    color: Colors.orange.shade300,
+                                    width: 1,
+                                  )
+                                  : BorderSide.none,
                         ),
                         child: InkWell(
                           borderRadius: BorderRadius.circular(16),
@@ -89,116 +127,260 @@ class ResponderEmergenciesScreen extends ConsumerWidget {
                                       ),
                                 ),
                               ),
-                          child: Padding(
-                            padding: const EdgeInsets.all(16.0),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(10),
-                                      decoration: BoxDecoration(
-                                        color: _getTypeColor(
-                                          emergency.type,
-                                        ).withOpacity(0.1),
-                                        shape: BoxShape.circle,
-                                      ),
-                                      child: Icon(
-                                        _getEmergencyIcon(emergency.type),
-                                        color: _getTypeColor(emergency.type),
-                                        size: 24,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Text(
-                                        '${emergency.type} Emergency',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 16,
-                                          fontWeight: FontWeight.w600,
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              gradient:
+                                  isUrgent
+                                      ? LinearGradient(
+                                        colors: [
+                                          Colors.red.shade50,
+                                          Colors.white,
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                      : isNew
+                                      ? LinearGradient(
+                                        colors: [
+                                          Colors.orange.shade50,
+                                          Colors.white,
+                                        ],
+                                        begin: Alignment.topLeft,
+                                        end: Alignment.bottomRight,
+                                      )
+                                      : null,
+                            ),
+                            child: Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Container(
+                                        padding: const EdgeInsets.all(10),
+                                        decoration: BoxDecoration(
+                                          color: _getTypeColor(
+                                            emergency.type,
+                                          ).withValues(alpha: 0.1),
+                                          shape: BoxShape.circle,
+                                        ),
+                                        child: Icon(
+                                          _getEmergencyIcon(emergency.type),
+                                          color: _getTypeColor(emergency.type),
+                                          size: 24,
                                         ),
                                       ),
-                                    ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 10,
-                                        vertical: 5,
+                                      const SizedBox(width: 12),
+                                      Expanded(
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(
+                                              children: [
+                                                Expanded(
+                                                  child: Text(
+                                                    '${emergency.type} Emergency',
+                                                    style: GoogleFonts.poppins(
+                                                      fontSize: 16,
+                                                      fontWeight:
+                                                          FontWeight.w600,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                                if (isUrgent) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.red,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      'URGENT',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Colors.white,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ] else if (isNew) ...[
+                                                  const SizedBox(width: 8),
+                                                  Container(
+                                                    padding:
+                                                        const EdgeInsets.symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2,
+                                                        ),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.orange,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                            8,
+                                                          ),
+                                                    ),
+                                                    child: Text(
+                                                      'NEW',
+                                                      style:
+                                                          GoogleFonts.poppins(
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight.bold,
+                                                            color: Colors.white,
+                                                          ),
+                                                    ),
+                                                  ),
+                                                ],
+                                              ],
+                                            ),
+                                          ],
+                                        ),
                                       ),
-                                      decoration: BoxDecoration(
-                                        color: _getStatusColor(
-                                          emergency.status,
-                                        ).withOpacity(0.1),
-                                        borderRadius: BorderRadius.circular(12),
-                                      ),
-                                      child: Text(
-                                        emergency.status,
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 12,
-                                          fontWeight: FontWeight.w500,
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 10,
+                                          vertical: 5,
+                                        ),
+                                        decoration: BoxDecoration(
                                           color: _getStatusColor(
                                             emergency.status,
+                                          ).withValues(alpha: 0.1),
+                                          borderRadius: BorderRadius.circular(
+                                            12,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 12),
-                                Text(
-                                  emergency.description,
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 14,
-                                    color:
-                                        isDarkMode
-                                            ? Colors.white70
-                                            : Colors.black87,
-                                  ),
-                                  maxLines: 2,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
-                                const SizedBox(height: 12),
-                                Row(
-                                  mainAxisAlignment:
-                                      MainAxisAlignment.spaceBetween,
-                                  children: [
-                                    Row(
-                                      children: [
-                                        Icon(
-                                          Icons.location_on_outlined,
-                                          size: 16,
-                                          color:
-                                              isDarkMode
-                                                  ? Colors.white60
-                                                  : Colors.black54,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          emergency.description ??
-                                              'Unknown location',
+                                        child: Text(
+                                          emergency.status,
                                           style: GoogleFonts.poppins(
                                             fontSize: 12,
-                                            color:
-                                                isDarkMode
-                                                    ? Colors.white60
-                                                    : Colors.black54,
+                                            fontWeight: FontWeight.w500,
+                                            color: _getStatusColor(
+                                              emergency.status,
+                                            ),
                                           ),
                                         ),
-                                      ],
-                                    ),
-                                    Text(
-                                      _formatTimestamp(emergency.timestamp),
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 12,
-                                        color:
-                                            isDarkMode
-                                                ? Colors.white60
-                                                : Colors.black54,
                                       ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Text(
+                                    emergency.description,
+                                    style: GoogleFonts.poppins(
+                                      fontSize: 14,
+                                      color:
+                                          isDarkMode
+                                              ? Colors.white70
+                                              : Colors.black87,
                                     ),
-                                  ],
-                                ),
-                              ],
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    children: [
+                                      Expanded(
+                                        child: Row(
+                                          children: [
+                                            Icon(
+                                              Icons.location_on_outlined,
+                                              size: 16,
+                                              color:
+                                                  isDarkMode
+                                                      ? Colors.white60
+                                                      : Colors.black54,
+                                            ),
+                                            const SizedBox(width: 4),
+                                            Expanded(
+                                              child: Text(
+                                                '${emergency.latitude.toStringAsFixed(4)}, ${emergency.longitude.toStringAsFixed(4)}',
+                                                style: GoogleFonts.poppins(
+                                                  fontSize: 12,
+                                                  color:
+                                                      isDarkMode
+                                                          ? Colors.white60
+                                                          : Colors.black54,
+                                                ),
+                                                overflow: TextOverflow.ellipsis,
+                                              ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color:
+                                              isUrgent
+                                                  ? Colors.red.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                  : isNew
+                                                  ? Colors.orange.withValues(
+                                                    alpha: 0.1,
+                                                  )
+                                                  : Colors.transparent,
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          border:
+                                              isUrgent || isNew
+                                                  ? Border.all(
+                                                    color:
+                                                        isUrgent
+                                                            ? Colors.red
+                                                                .withValues(
+                                                                  alpha: 0.3,
+                                                                )
+                                                            : Colors.orange
+                                                                .withValues(
+                                                                  alpha: 0.3,
+                                                                ),
+                                                    width: 1,
+                                                  )
+                                                  : null,
+                                        ),
+                                        child: Text(
+                                          _formatTimestamp(emergency.timestamp),
+                                          style: GoogleFonts.poppins(
+                                            fontSize: 12,
+                                            fontWeight:
+                                                isUrgent || isNew
+                                                    ? FontWeight.w600
+                                                    : FontWeight.normal,
+                                            color:
+                                                isUrgent
+                                                    ? Colors.red.shade700
+                                                    : isNew
+                                                    ? Colors.orange.shade700
+                                                    : (isDarkMode
+                                                        ? Colors.white60
+                                                        : Colors.black54),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
                             ),
                           ),
                         ),
@@ -271,6 +453,20 @@ class ResponderEmergenciesScreen extends ConsumerWidget {
     } else {
       return 'Just now';
     }
+  }
+
+  bool _isNewEmergency(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    return difference.inMinutes <=
+        30; // Consider emergency "new" if within 30 minutes
+  }
+
+  bool _isUrgentEmergency(DateTime timestamp) {
+    final now = DateTime.now();
+    final difference = now.difference(timestamp);
+    return difference.inMinutes <=
+        5; // Consider emergency "urgent" if within 5 minutes
   }
 
   Widget _buildEmptyState(BuildContext context, bool isDarkMode) {

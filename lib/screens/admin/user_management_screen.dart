@@ -4,6 +4,7 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:hugeicons/hugeicons.dart';
 import '../../providers/admin_provider.dart';
 import '../../models/user.dart';
+import '../../widgets/admin/admin_app_bar.dart';
 
 class UserManagementScreen extends ConsumerStatefulWidget {
   const UserManagementScreen({super.key});
@@ -32,17 +33,9 @@ class _UserManagementScreenState extends ConsumerState<UserManagementScreen> {
     final isDarkMode = Theme.of(context).brightness == Brightness.dark;
 
     return Scaffold(
-      appBar: AppBar(
-        title: Text(
-          'User Management',
-          style: GoogleFonts.poppins(fontWeight: FontWeight.w600),
-        ),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => ref.read(adminProvider.notifier).loadUsers(),
-          ),
-        ],
+      appBar: AdminAppBar(
+        title: 'User Management',
+        onRefresh: () => ref.read(adminProvider.notifier).loadUsers(),
       ),
       body: Column(
         children: [
